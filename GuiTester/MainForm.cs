@@ -232,7 +232,7 @@ namespace GuiTester
 
         //
         // https://support.microsoft.com/en-us/help/3177312/sql-server-2016-build-versions
-        // SQL Server 2016 SP1 + CU8 - March 19,2018
+        // SQL Server 2016 SP2
         private const string C_SERVER_VERSION = "13.0.5026.0";
 
         //
