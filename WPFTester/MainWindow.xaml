@@ -1,0 +1,89 @@
+﻿<Window x:Class="WPFTester.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WPFTester"
+        mc:Ignorable="d"
+        Title="Let's Convert to Memory Optimized" Height="462.696" Width="817.405" ResizeMode="NoResize" WindowState="Normal" WindowStartupLocation="CenterScreen" Loaded="Window_Loaded">
+    <Grid Name="Master">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="42" Name="Master1"/>
+            <RowDefinition Height="42" Name="Master2"/>
+            <RowDefinition Height="42" Name="Master3"/>
+            <RowDefinition Height="42" Name="Master4"/>
+            <RowDefinition Height="42" Name="Master5"/>
+            <RowDefinition Height="42" Name="Master6"/>
+            <RowDefinition Height="42" Name="Master7"/>
+            <RowDefinition Height="42" Name="Master8"/>
+            <RowDefinition Height="22" Name="Master9"/>
+            <RowDefinition Height="22" Name="Master10"/>
+            <RowDefinition Height="42" Name="Master11"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="5" />
+            <ColumnDefinition Width="61" />
+            <ColumnDefinition Width="331"/>
+            <ColumnDefinition Width="392" />
+            <ColumnDefinition Width="11" />
+            <ColumnDefinition Width="5" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="1" Grid.Row="0" Height="35" Padding="5" Background="#4E87D4" Grid.ColumnSpan="2" Margin="0,4">
+            <Label Name="Title" VerticalAlignment="Center" Foreground="White" Content="Define the connection"/>
+        </Border>
+        <Border Grid.Column="3" Grid.Row="0" Height="35" Padding="5" Background="#4E87D4" Margin="0,4">
+            <Label Name="Title2" VerticalAlignment="Center" Foreground="White" Content="Options"/>
+        </Border>
+
+        <Label Content="Server"  Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="0,8"/>
+        <TextBox Height="22" Grid.Row="1" TextWrapping="Wrap"  Grid.Column="2" Width="219" Name="txtServer" HorizontalAlignment="Right" Margin="0,10" VerticalAlignment="Center"/>
+        <!-- the second row-->
+        <Label Content="Authentication" Grid.Row="2" Grid.Column="1" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="0,8"/>
+        <ComboBox Grid.Row="2" Grid.Column="2" Width="219" Name="cmbAuth" HorizontalAlignment="Right" Height="22" SelectedIndex="0" Margin="0,10" VerticalAlignment="Center" SelectionChanged="cmbAuth_SelectionChanged">
+            <ComboBoxItem Content="Windows"/>
+            <ComboBoxItem Content="SQL Server"/>
+        </ComboBox>
+        <Label Content="Indexes for primary keys" Grid.Row="2" Grid.Column="3" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="5,8"/>
+        <ComboBox Grid.Row="2" Grid.Column="3" Width="219" Name="cmbIndexOptions" HorizontalAlignment="Right" Height="22" SelectedIndex="0" Margin="0,10" VerticalAlignment="Center" >
+            <ComboBoxItem Content="Use NONCLUSTERED HASH indexes"/>
+            <ComboBoxItem Content="Use RANGE indexes"/>
+            <ComboBoxItem Content="Use what is written in the table extended property"/>
+        </ComboBox>
+
+        <!--the third row-->
+        <Label Content="User name" Grid.Row="3" Grid.Column="1" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="0,8"/>
+        <TextBox Height="22" Grid.Row="3" TextWrapping="Wrap" Text="" Grid.Column="2" Width="219" Name="txtUserName" HorizontalAlignment="Right" Margin="0,10" VerticalAlignment="Center"/>
+        <Label Content="Password" Grid.Row="4" Grid.Column="1" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="0,8" />
+        <TextBox Height="22" Grid.Row="4" TextWrapping="Wrap" Text="" Grid.Column="2" Width="219" Name="txtPassword" HorizontalAlignment="Right" Margin="0,10" VerticalAlignment="Center"/>
+
+        <Label Content="Schema contains" Grid.Row="3" Grid.Column="3" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="5,8"/>
+
+        <TextBox Height="22" Grid.Row="3" TextWrapping="Wrap"  Grid.Column="3" Width="219" Name="txtSchema" HorizontalAlignment="Right" Margin="0,10" VerticalAlignment="Center"/>
+        <Label Content="Table contains" Grid.Row="4" Grid.Column="3" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="5,8" />
+        <TextBox Height="22" Grid.Row="4" TextWrapping="Wrap" Text="" Grid.Column="3" Width="219" Name="txtTable" HorizontalAlignment="Right" Margin="0,10" VerticalAlignment="Center"/>
+
+
+
+        <Label Content="The source database" Grid.Row="5" Grid.Column="1" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="0,8" />
+
+        <ComboBox Grid.Row="5" Grid.Column="2" HorizontalAlignment="Right" Width="219" Height="22" DropDownOpened="ComboBox_DropDownOpened" Name="cmbDatabase" Margin="0,10" VerticalAlignment="Center"/>
+
+        <CheckBox  Grid.Row="6" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Center" IsChecked="True" Name="chkNewDatabase" Checked="chkNewDatabase_Checked" Unchecked="chkNewDatabase_Unchecked_1" Margin="64.878,14,126,14">
+            <TextBlock FlowDirection="LeftToRight" Text="Create a new database" />
+        </CheckBox>
+        <Label Content="The destination database" Grid.Row="7" Grid.Column="1" VerticalAlignment="Center" Grid.ColumnSpan="2" Margin="0,8" />
+        <ComboBox Grid.Row="7" Grid.Column="2" Width="219"  HorizontalAlignment="Right" Height="22" Margin="0,10,0,9" Name="cmbDestination" DropDownOpened="Destination_DropDownOpened" VerticalAlignment="Center"/>
+
+        <Button Content="Convert To Memory Optimized" Grid.Column="1"  Margin="2,10,0,0" Grid.Row="10" VerticalAlignment="Top" Width="220" RenderTransformOrigin="8.75,0.904" Grid.ColumnSpan="2" HorizontalAlignment="Center" Height="25" Click="Button_Click" Name="btnConvertToMO"/>
+        <Button Content="Cancel" Grid.Column="3" HorizontalAlignment="Center" Margin="0,10,0,0" Grid.Row="10" VerticalAlignment="Top" Width="220" RenderTransformOrigin="8.75,0.904" Height="25" Name="btnCancel" Click="btnCancel_Click_1"/>
+        <CheckBox Content="Also copy table data to the new memory optimized table" IsChecked="True" Grid.Column="3" HorizontalAlignment="Left" Margin="5,10,0,0" Grid.Row="1" VerticalAlignment="Center" Name="chkCopyData"/>
+
+        <ProgressBar Grid.ColumnSpan="4" Grid.Column="1" HorizontalAlignment="Left"  Margin="10,10,0,0" Grid.Row="9"  Width="760" Name="ProgressBar1" VerticalAlignment="Center" Visibility="Hidden" Height="15"/>
+        <TextBox  Height="22" Grid.Row="8" IsReadOnly="True" Grid.Column="1" VerticalAlignment="Center"  Name="lblOveral" Width="50" HorizontalAlignment="Left" FontSize="10" FontWeight="Bold" Background="#FFF0DCDC" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"/>
+        <TextBox Height="22" Grid.Row="8" TextWrapping="Wrap" IsReadOnly="True" Grid.Column="2" Width="330"   x:Name="txtCode" HorizontalAlignment="Left" VerticalAlignment="Center"  FontSize="10" FontWeight="Bold" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" Background="#FFF0DCDC" />
+        <TextBox Height="22" Grid.Row="8" TextWrapping="Wrap" IsReadOnly="True" Grid.Column="3" Width="385" x:Name="txtDescription" HorizontalAlignment="Right"  VerticalAlignment="Center"  FontSize="10" FontWeight="Bold" BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}" Background="#FFF0DCDC"/>
+
+    </Grid>
+</Window>
