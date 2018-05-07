@@ -288,6 +288,13 @@ namespace GuiTester
             serverInMem = null;
             dbInMemory = null;
 
+            //for (int i = 0; i <= GC.MaxGeneration; i++)
+            //{
+            //    GC.Collect(i, GCCollectionMode.Forced, true, true);
+            //    GC.WaitForPendingFinalizers();
+            //}
+
+
 
         }
         #endregion
