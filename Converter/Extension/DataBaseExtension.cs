@@ -1,12 +1,34 @@
 ﻿using Converter.Interface;
 using Microsoft.SqlServer.Management.Smo;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Converter.Extension
 {
     public static class DataBaseExtension
     {
 
-        
+        public static List<Table> ConvertToGenericTables(ICollection collection)
+        {
+            return collection.Cast<Table>().ToList();
+        }
+        public static List<StoredProcedure> ConvertToGenericStoredProcedures(ICollection collection)
+        {
+            return collection.Cast<StoredProcedure>().ToList();
+        }
+        public static List<UserDefinedFunction> ConvertToGenericFunctions(ICollection collection)
+        {
+            return collection.Cast<UserDefinedFunction>().ToList();
+        }
+        public static List<View> ConvertToGenericView(ICollection collection)
+        {
+            return collection.Cast<View>().ToList();
+        }
+
+
+
+
         public static bool SwichToMo( this Database self, 
                                         Database dbInMemory,
                                         ILog logger,
@@ -26,6 +48,11 @@ namespace Converter.Extension
             logger.SetValue(logger.CurrentItem);
             logger.SetMaxValue(logger.Counter);
             TableCollection tables = self.Tables;
+
+            //List<Table> ilist = ConvertToGenericTables(self.Tables);
+            //IEnumerable<Table> mylist = ilist.Where(a => a.Schema == "HumanResources");
+
+
 
             foreach (Table tbl in tables )
             {
@@ -138,22 +165,25 @@ namespace Converter.Extension
 
             logger.SetOverall("4/6");
             // user defined function 
+
+            IEnumerable<UserDefinedFunction> udfs = ConvertToGenericFunctions(self.UserDefinedFunctions).Where(a => a.IsSystemObject == false);
+
             logger.CurrentItem = 1;
-            logger.Counter = self.UserDefinedFunctions.Count;
+            logger.Counter = udfs.Count();
+
 
             logger.SetValue(logger.CurrentItem);
             logger.SetMaxValue(logger.Counter);
 
-            UserDefinedFunctionCollection udfs = self.UserDefinedFunctions;
 
             foreach (UserDefinedFunction sp in udfs)
             {
-                if (sp.IsSystemObject)
-                {
-                    logger.CurrentItem++;
-                    logger.SetValue(logger.CurrentItem);
-                    continue;
-                }
+                //if (sp.IsSystemObject)
+                //{
+                //    logger.CurrentItem++;
+                //    logger.SetValue(logger.CurrentItem);
+                //    continue;
+                //}
                 if (o.SchemaContains.Equals(string.Empty) == false && sp.Schema.Contains(o.SchemaContains) == false)
                 {
                     logger.CurrentItem++;
@@ -177,22 +207,24 @@ namespace Converter.Extension
 
             logger.SetOverall("5/6");
             //  STORED PROCEDURES
+            IEnumerable<StoredProcedure> sps = ConvertToGenericStoredProcedures(self.StoredProcedures).Where(a => a.IsSystemObject == false);
+
             logger.CurrentItem = 1;
-            logger.Counter = self.StoredProcedures.Count;
+            logger.Counter = sps.Count();
 
             logger.SetValue(logger.CurrentItem);
             logger.SetMaxValue(logger.Counter);
 
-            StoredProcedureCollection sps = self.StoredProcedures;
+            
             
             foreach (StoredProcedure sp in sps)
             {
-                if (sp.IsSystemObject)
-                {
-                    logger.CurrentItem++;
-                    logger.SetValue(logger.CurrentItem);
-                    continue;
-                }
+                //if (sp.IsSystemObject)
+                //{
+                //    logger.CurrentItem++;
+                //    logger.SetValue(logger.CurrentItem);
+                //    continue;
+                //}
                 if (o.SchemaContains.Equals(string.Empty) == false && sp.Schema.Contains(o.SchemaContains) == false)
                 {
                     logger.CurrentItem++;
@@ -215,22 +247,26 @@ namespace Converter.Extension
 
             logger.SetOverall("6/6");
             // VIEWS
+
+            IEnumerable<View> vs = ConvertToGenericView(self.Views).Where(a => a.IsSystemObject == false);
+
             logger.CurrentItem = 1;
-            logger.Counter = self.Views.Count;
+            logger.Counter = vs.Count();
+            
 
             logger.SetValue(logger.CurrentItem);
             logger.SetMaxValue(logger.Counter);
 
-            ViewCollection vs = self.Views;
+            //ViewCollection vs = self.Views;
             
             foreach (Microsoft.SqlServer.Management.Smo.View sp in vs)
             {
-                if (sp.IsSystemObject)
-                {
-                    logger.CurrentItem++;
-                    logger.SetValue(logger.CurrentItem);
-                    continue;
-                }
+                //if (sp.IsSystemObject)
+                //{
+                //    logger.CurrentItem++;
+                //    logger.SetValue(logger.CurrentItem);
+                //    continue;
+                //}
                 if (o.SchemaContains.Equals(string.Empty) == false && sp.Schema.Contains(o.SchemaContains) == false)
                 {
                     logger.CurrentItem++;
