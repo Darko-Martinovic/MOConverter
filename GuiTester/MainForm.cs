@@ -143,7 +143,7 @@ namespace GuiTester
 
             if (new Version(server.VersionString) < new Version(C_SERVER_VERSION))
             {
-                MessageBox.Show("The server has to be SQL2016 SP1+CU8 or higher", 
+                MessageBox.Show("The server has to be SQL2016 SP2 or higher", 
                                 "Error", 
                                 MessageBoxButtons.OK, 
                                 MessageBoxIcon.Error);
@@ -233,7 +233,7 @@ namespace GuiTester
         //
         // https://support.microsoft.com/en-us/help/3177312/sql-server-2016-build-versions
         // SQL Server 2016 SP1 + CU8 - March 19,2018
-        private const string C_SERVER_VERSION = "13.0.4474.0";
+        private const string C_SERVER_VERSION = "13.0.5026.0";
 
         //
         // New features available with SQL Server 2017
