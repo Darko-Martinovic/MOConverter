@@ -90,7 +90,7 @@ namespace WPFTester
             i.databaseName = cmbDatabase.Text;
             i.inMemoryDataBaseName = cmbDestination.Text;
             i.userName = txtUserName.Text;
-            i.password = txtPassword.Text;
+            i.password = txtPassword.Password;
             i.isWindows = cmbAuth.SelectedIndex == 0 ? true : false;
             i.createNew = chkNewDatabase.IsChecked == true;
             if (i.createNew)
@@ -131,7 +131,7 @@ namespace WPFTester
                     txtServer.Text,
                     "master",
                     cmbAuth.SelectedIndex == 0 ? true : false,
-                    txtUserName.Text, txtPassword.Text), " SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1) ? true : false;
+                    txtUserName.Text, txtPassword.Password), " SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1) ? true : false;
 
             if (isSysAdmin == false)
             {
@@ -583,7 +583,7 @@ namespace WPFTester
                 return;
 
             }
-            if (cmbAuth.SelectedIndex != 0 && (txtUserName.Text.Trim().Equals(string.Empty) || txtPassword.Text.Trim().Equals(string.Empty)))
+            if (cmbAuth.SelectedIndex != 0 && (txtUserName.Text.Trim().Equals(string.Empty) || txtPassword.Password.Trim().Equals(string.Empty)))
             {
 
                 MessageBox.Show("Please enter userName and password", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -605,7 +605,7 @@ namespace WPFTester
                     txtServer.Text,
                     "master",
                     cmbAuth.SelectedIndex == 0 ? true : false,
-                    txtUserName.Text, txtPassword.Text), @"SELECT name 
+                    txtUserName.Text, txtPassword.Password), @"SELECT name 
                                                                 FROM sys.databases
                                                                 WHERE state = 0 
                                                                     AND is_read_only = 0 
@@ -693,7 +693,7 @@ namespace WPFTester
                 if (cmbAuth.SelectedIndex == 0)
                 {
                     txtUserName.Text = "";
-                    txtPassword.Text = "";
+                    txtPassword.Password = "";
                     txtUserName.IsEnabled = false;
                     txtPassword.IsEnabled = false;
                 }
