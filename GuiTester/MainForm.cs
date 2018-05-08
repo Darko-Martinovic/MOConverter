@@ -271,7 +271,7 @@ namespace GuiTester
             {
                 enumFeatures = SQLServerMoFeatures.SQLServer2017;
             }
-            success = db.SwichToMo(
+            success = db.SwitchToMo(
                                     dbInMemory, 
                                     (ILog)this, 
                                     cnf, 

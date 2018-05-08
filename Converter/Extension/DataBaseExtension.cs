@@ -29,7 +29,7 @@ namespace Converter.Extension
 
 
 
-        public static bool SwichToMo( this Database self, 
+        public static bool SwitchToMo( this Database self, 
                                         Database dbInMemory,
                                         ILog logger,
                                         Configuration.Configuration cnf,
