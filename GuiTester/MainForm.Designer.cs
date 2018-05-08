@@ -441,7 +441,7 @@
             this.MaximizeBox = false;
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Convert to Memory Optimized Database";
+            this.Text = "Let\'s Convert Together to In-Memory OLTP";
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.grpConnection.ResumeLayout(false);
             this.grpConnection.PerformLayout();
