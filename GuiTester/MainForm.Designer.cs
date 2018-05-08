@@ -347,10 +347,10 @@
             this.rbHash.Checked = true;
             this.rbHash.Location = new System.Drawing.Point(14, 16);
             this.rbHash.Name = "rbHash";
-            this.rbHash.Size = new System.Drawing.Size(208, 17);
+            this.rbHash.Size = new System.Drawing.Size(116, 17);
             this.rbHash.TabIndex = 0;
             this.rbHash.TabStop = true;
-            this.rbHash.Text = "Use NONCLUSTERED HASH indexes";
+            this.rbHash.Text = "Use HASH indexes";
             this.rbHash.UseVisualStyleBackColor = true;
             // 
             // chkCopyData
