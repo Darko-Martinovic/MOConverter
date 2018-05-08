@@ -1,7 +1,7 @@
 ## :white_check_mark: To convert your database to In-Memory OLTP execute following code
 
 ```diff
--            // private Inputs i = null; the class that holds all user inputs
+-            // private Inputs i = null; the class that holds all inputs ( e.g. server name, type of authentication etc. )
 -            ServerConnection cnn = new ServerConnection(i.serverName);
 -            cnn.Connect();
 -            Server server = new Server(cnn);
