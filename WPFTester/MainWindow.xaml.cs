@@ -152,6 +152,16 @@ namespace WPFTester
                                  MessageBoxImage.Error);
                 return;
             }
+            if (server.Databases[i.databaseName] == null)
+            {
+                MessageBox.Show("Choose the database!",
+                                "Error",
+                                 MessageBoxButton.OK,
+                                 MessageBoxImage.Error);
+                cmbDatabase.SelectedItem = null;
+                return;
+
+            }
 
             if (server.Databases[i.databaseName].HasMemoryOptimizedObjects)
             {

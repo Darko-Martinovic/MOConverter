@@ -144,10 +144,21 @@ namespace GuiTester
             if (new Version(server.VersionString) < new Version(C_SERVER_VERSION))
             {
                 MessageBox.Show("The server has to be SQL2016 SP2 or higher", 
-                                "Error", 
-                                MessageBoxButtons.OK, 
+                                "Error",
+                                MessageBoxButtons.OK,
                                 MessageBoxIcon.Error);
                 return;
+            }
+
+            if (server.Databases[i.databaseName] == null)
+            {
+                MessageBox.Show("Choose the database!",
+                                "Error",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
+                cmbDatabase.SelectedItem = null;
+                return;
+
             }
 
             if (server.Databases[i.databaseName].HasMemoryOptimizedObjects)
