@@ -81,8 +81,8 @@ namespace Converter.Configuration
                     }
                     catch (Exception ex)
                     {
-                        if (Debugger.IsAttached)
-                            Debugger.Break();
+                        //if (Debugger.IsAttached)
+                        //    Debugger.Break();
                     }
 
                 }

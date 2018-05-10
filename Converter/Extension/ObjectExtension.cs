@@ -67,8 +67,8 @@ namespace Converter.Extension
                 }
                 catch (Exception ex)
                 {
-                    if (Debugger.IsAttached)
-                       Debugger.Break();
+                    //if (Debugger.IsAttached)
+                    //   Debugger.Break();
                 }
             }
 

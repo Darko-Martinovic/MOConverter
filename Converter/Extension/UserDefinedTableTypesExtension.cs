@@ -93,8 +93,8 @@ namespace Converter.Extension
             }
             catch (Exception ex)
             {
-                if (Debugger.IsAttached)
-                    Debugger.Break();
+                //if (Debugger.IsAttached)
+                //    Debugger.Break();
                 
 
                 error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)

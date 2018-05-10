@@ -193,8 +193,8 @@ namespace Converter.Extension
             }
             catch (Exception ex)
             {
-                if (Debugger.IsAttached)
-                    Debugger.Break();
+                //if (Debugger.IsAttached)
+                //    Debugger.Break();
                
                 error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                     .Select(ex1 => ex1.Message));
@@ -224,8 +224,8 @@ namespace Converter.Extension
                 {
                     if (InMemDatabase.Tables.Contains(newTable.Name, schemaName))
                         InMemDatabase.Tables[newTable.Name, schemaName].Drop();
-                    if (Debugger.IsAttached)
-                        Debugger.Break();
+                    //if (Debugger.IsAttached)
+                    //    Debugger.Break();
 
                     logger.Log("Error", self.FName());
                 
@@ -262,8 +262,8 @@ namespace Converter.Extension
                 }
                 catch (Exception ex)
                 {
-                    if (Debugger.IsAttached)
-                        Debugger.Break();
+                    //if (Debugger.IsAttached)
+                    //    Debugger.Break();
 
 
                     error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
