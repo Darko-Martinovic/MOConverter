@@ -141,14 +141,14 @@ namespace GuiTester
            
 
 
-            if (new Version(server.VersionString) < new Version(C_SERVER_VERSION))
-            {
-                MessageBox.Show("The server has to be SQL2016 SP2 or higher", 
-                                "Error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
-                return;
-            }
+            //if (new Version(server.VersionString) < new Version(C_SERVER_VERSION))
+            //{
+            //    MessageBox.Show("The server has to be SQL2016 SP2 or higher", 
+            //                    "Error",
+            //                    MessageBoxButtons.OK,
+            //                    MessageBoxIcon.Error);
+            //    return;
+            //}
 
             if (server.Databases[i.databaseName] == null)
             {
