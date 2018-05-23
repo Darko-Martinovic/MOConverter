@@ -92,7 +92,7 @@ namespace GuiTester
                 InMemoryDataBaseName = cmbDestination.Text,
                 UserName = txtUserName.Text,
                 Password = txtPassword.Text,
-                IsWindows = cmbAuth.SelectedIndex == 0 ? true : false,
+                IsWindows = cmbAuth.SelectedIndex == 0,
                 CreateNew = chkNewDatabase.Checked
             };
             if (_i.CreateNew)
@@ -129,8 +129,8 @@ namespace GuiTester
             bool isSysAdmin = ((int)DataAccess.ExecuteScalar(DataAccess.GetConnectionString(
                     txtServer.Text,
                     "master",
-                    cmbAuth.SelectedIndex == 0 ? true : false,
-                    txtUserName.Text, txtPassword.Text), $@" SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1) ? true : false;
+                    cmbAuth.SelectedIndex == 0 ,
+                    txtUserName.Text, txtPassword.Text), $@" SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1) ;
 
             if ( isSysAdmin== false)
             {
@@ -647,7 +647,7 @@ namespace GuiTester
                 DataAccess.GetConnectionString(
                     txtServer.Text,
                     "master",
-                    cmbAuth.SelectedIndex == 0 ? true : false,
+                    cmbAuth.SelectedIndex == 0 ,
                     txtUserName.Text, txtPassword.Text), @"SELECT name 
                                                                 FROM sys.databases
                                                                 WHERE state = 0 
