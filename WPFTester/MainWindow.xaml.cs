@@ -14,6 +14,7 @@ using System.Diagnostics;
 using Converter.Extension;
 using Converter.Inputs;
 using Converter.DataAccess;
+using Converter.Enums;
 using Converter.Utility;
 
 namespace WPFTester
@@ -302,10 +303,10 @@ namespace WPFTester
             Database dbInMemory = serverInMem.Databases[_i.InMemoryDataBaseName];
 
             // new features available starting with SQL Server 2017
-            SQLServerMoFeatures enumFeatures = SQLServerMoFeatures.SQLServer2016;
+            SqlServerMoFeatures enumFeatures = SqlServerMoFeatures.SqlServer2016;
             if (new Version(server.VersionString) >= new Version(CNewFeaturesVersion))
             {
-                enumFeatures = SQLServerMoFeatures.SQLServer2017;
+                enumFeatures = SqlServerMoFeatures.SqlServer2017;
             }
             _success = db.SwitchToMo(
                                     dbInMemory,

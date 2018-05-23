@@ -1,90 +1,54 @@
 ﻿using System;
 using System.Configuration;
-using System.Diagnostics;
-using System.Reflection;
+using static System.Reflection.BindingFlags;
 
 namespace Converter.Configuration
 {
     public class Configuration
     {
 
-        public string fullName
-        {
-            get { return "[" + mHelperSchema + "].[" + mHelperTableName + "]"; }
-        }
+        public string FullName => "[" + HelperSchema + "].[" + HelperTableName + "]";
 
-        private string mEPName = "MOIndexEp";
+        [StSetupFromConfig(true)] public string EpName { get; set; } = "MOIndexEp";
+
+        [StSetupFromConfig(true)] public string HelperTableName { get; set; } = "TestTable";
+
+
+        [StSetupFromConfig(true)] public string HelperSchema { get; set; } = "dbo";
+
+
+        [StSetupFromConfig(true)] public string FileGroupName { get; set; } = "mofg";
+
+        [StSetupFromConfig(true)] public string FileName { get; set; } = "mofile";
+
+
+        public string MMoPath = @"C:\MOCONTAINTER";
         [StSetupFromConfig(true)]
-        public string EPName
+        public string MoPath
         {
-            get { return mEPName; }
-            set { mEPName = value; }
-        }
-
-        private  string mHelperTableName = "TestTable";
-        [StSetupFromConfig(true)]
-        public string helperTableName
-        {
-            get { return mHelperTableName; }
-            set { mHelperTableName = value; }
-        }
-
-
-        private  string mHelperSchema = "dbo";
-        [StSetupFromConfig(true)]
-        public string helperSchema
-        {
-            get { return mHelperSchema; }
-            set { mHelperSchema = value; }
-        }
-
-
-
-        private  string mFileGroupName = "mofg";
-        [StSetupFromConfig(true)]
-        public string FileGroupName
-        {
-            get { return mFileGroupName; }
-            set { mFileGroupName = value; }
-        }
-
-        private string mFileName = "mofile";
-        [StSetupFromConfig(true)]
-        public  string FileName
-        {
-            get { return mFileName; }
-            set { mFileName = value; }
-        }
-
-
-        private  string mMoPath = @"C:\MOCONTAINTER";
-        [StSetupFromConfig(true)]
-        public  string MoPath
-        {
-            get { return mMoPath; }
-            set { mMoPath = value + DateTime.Now.ToString("dd_MM_yyyy_HH_mm_ss"); }
+            get => MMoPath;
+            set => MMoPath = value + DateTime.Now.ToString("dd_MM_yyyy_HH_mm_ss");
         }
 
 
         public void LoadConfig()
         {
-            foreach (PropertyInfo objectProperty in this.GetType().GetProperties((BindingFlags.IgnoreCase
-                            | (BindingFlags.Instance
-                            | (BindingFlags.NonPublic | BindingFlags.Public)))))
+            foreach (var objectProperty in GetType().GetProperties((IgnoreCase
+                            | (Instance
+                            | (NonPublic | Public)))))
             {
-                if ((objectProperty.GetCustomAttributes(typeof(StSetupFromConfig), true).Length > 0))
+                if ((objectProperty.GetCustomAttributes(typeof(StSetupFromConfig), true).Length <= 0)) continue;
+                try
                 {
-                    try
-                    {
-                        string a = objectProperty.Name.ToUpper();
-                        objectProperty.SetValue(this, Convert.ChangeType(ConfigurationManager.AppSettings[a], objectProperty.PropertyType),BindingFlags.Public , null, null, null);
-                    }
-                    catch (Exception ex)
-                    {
-                        //if (Debugger.IsAttached)
-                        //    Debugger.Break();
-                    }
-
+                    string a = objectProperty.Name.ToUpper();
+                    objectProperty.SetValue(this,
+                        Convert.ChangeType(ConfigurationManager.AppSettings[a], objectProperty.PropertyType),
+                        Public, null, null, null);
+                }
+                catch (Exception)
+                {
+                    //if (Debugger.IsAttached)
+                    //    Debugger.Break();
                 }
 
             }
@@ -95,27 +59,11 @@ namespace Converter.Configuration
 
     }
 
-    [System.AttributeUsage(System.AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
-    public class StSetupFromConfig : System.Attribute
+    [System.AttributeUsage(AttributeTargets.Property)]
+    public class StSetupFromConfig : Attribute
     {
+        public StSetupFromConfig(bool wValueFromConfig) => ValueFromConfig = wValueFromConfig;
 
-        private bool m_valueFromConfig = false;
-
-        public StSetupFromConfig(bool WValueFromConfig)
-        {
-            this.ValueFromConfig = WValueFromConfig;
-        }
-
-        public bool ValueFromConfig
-        {
-            get
-            {
-                return m_valueFromConfig;
-            }
-            set
-            {
-                m_valueFromConfig = value;
-            }
-        }
+        public bool ValueFromConfig { get; set; } = false;
     }
 }

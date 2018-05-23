@@ -3,6 +3,7 @@ using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using Converter.Enums;
 using static Converter.Options.Options;
 
 namespace Converter.Extension
@@ -19,7 +20,7 @@ namespace Converter.Extension
                                       Options.Options o, 
                                       ref string error, 
                                       ILog logger,
-                                      SQLServerMoFeatures enumFeatures)
+                                      SqlServerMoFeatures enumFeatures)
         {
             bool retValue = false;
             string schemaName = self.Schema;
@@ -82,9 +83,9 @@ namespace Converter.Extension
                         idx.IndexType = IndexType.NonClusteredIndex;
                     else
                     {
-                        if (self.ExtendedProperties[cnf.EPName] != null)
+                        if (self.ExtendedProperties[cnf.EpName] != null)
                         {
-                            var value = self.ExtendedProperties[cnf.EPName].Value.ToString().ToUpper();
+                            var value = self.ExtendedProperties[cnf.EpName].Value.ToString().ToUpper();
                             if (value == "HASH")
                             {
                                 idx.IndexType = IndexType.NonClusteredHashIndex;
@@ -118,7 +119,7 @@ namespace Converter.Extension
                 {
 
                     // Limit the total number of indexes to 8 for SQLServer2016
-                    if (enumFeatures == SQLServerMoFeatures.SQLServer2016 && noIndexes == 8)
+                    if (enumFeatures == SqlServerMoFeatures.SqlServer2016 && noIndexes == 8)
                     {
                         logger.LogWarErr("Error:Create index failed", $"Could not create in-memory index {i.Name} " +
                                                                       $"because it exceeds the maximum of 8 allowed per table or view.");
@@ -208,17 +209,17 @@ namespace Converter.Extension
             // if copy data is checked
             if (o.CopyData)
             {
-                if (inMemDatabase.Tables.Contains(cnf.helperTableName, cnf.helperSchema))
-                    inMemDatabase.Tables[cnf.helperTableName, cnf.helperSchema].Drop();
+                if (inMemDatabase.Tables.Contains(cnf.HelperTableName, cnf.HelperSchema))
+                    inMemDatabase.Tables[cnf.HelperTableName, cnf.HelperSchema].Drop();
 
                 try
                 {
                     logger.Log("Insert data ", newTable.FName());
                     //Insert into 
-                    traditional.ExecuteNonQuery(self.InsertIntoStm(inMemDatabase.Name, cnf.fullName));
+                    traditional.ExecuteNonQuery(self.InsertIntoStm(inMemDatabase.Name, cnf.FullName));
                     //Insert statement
-                    Table test = inMemDatabase.Tables[cnf.helperTableName, cnf.helperSchema];
-                    inMemDatabase.ExecuteNonQuery(newTable.FullInsertStm(test.SelectStm(), hasIdentities, cnf.fullName));
+                    Table test = inMemDatabase.Tables[cnf.HelperTableName, cnf.HelperSchema];
+                    inMemDatabase.ExecuteNonQuery(newTable.FullInsertStm(test.SelectStm(), hasIdentities, cnf.FullName));
                     retValue = true;
                     logger.Log("OK ", newTable.FName());
                     //

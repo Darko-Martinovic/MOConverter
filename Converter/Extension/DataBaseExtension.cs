@@ -1,4 +1,5 @@
-﻿using Converter.Interface;
+﻿using Converter.Enums;
+using Converter.Interface;
 using Microsoft.SqlServer.Management.Smo;
 
 namespace Converter.Extension
@@ -23,7 +24,7 @@ namespace Converter.Extension
                                         ILog logger,
                                         Configuration.Configuration cnf,
                                         Options.Options o,
-                                        SQLServerMoFeatures enumFeatures)
+                                        SqlServerMoFeatures enumFeatures)
         {
 
 
