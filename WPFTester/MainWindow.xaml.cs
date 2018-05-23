@@ -132,7 +132,8 @@ namespace WPFTester
             }
             catch (Exception ex)
             {
-                MessageBox.Show($@"I'm unable to connect to the server {_i.ServerName}\r\n{ex.Message}",
+                MessageBox.Show($@"I'm unable to connect to the server {_i.ServerName}
+                                {ex.Message}",
                                 @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
@@ -186,7 +187,7 @@ namespace WPFTester
 
             if (_i.CreateNew)
             {
-                if (MessageBox.Show($"You choose to create a new database {_i.DatabaseName}_InMem\\r\n Are you sure?",
+                if (MessageBox.Show($"You choose to create a new database {_i.DatabaseName}_InMem {Environment.NewLine} Are you sure?",
                                     @"Question",
                                     MessageBoxButton.YesNo,
                                     MessageBoxImage.Question) == MessageBoxResult.No)
@@ -204,7 +205,7 @@ namespace WPFTester
             }
             else
             {
-                if (MessageBox.Show($"You choose to convert the database {_i.DatabaseName.ToUpper()} to In-Mem {_i.InMemoryDataBaseName.ToUpper()}\\r\nAre you sure?",
+                if (MessageBox.Show($@"You choose to convert the database {_i.DatabaseName.ToUpper()} to In-Mem {_i.InMemoryDataBaseName.ToUpper()} {Environment.NewLine} Are you sure?",
                                     @"Question",
                                     MessageBoxButton.YesNo,
                                     MessageBoxImage.Question) == MessageBoxResult.No)
@@ -460,14 +461,14 @@ namespace WPFTester
             {
                 _sb = new StringBuilder();
                 _sb.Append($"****Summary report - converting  {_i.DatabaseName}  to IN-MEM OLTP {_i.InMemoryDataBaseName}  on server {_i.ServerName} ");
-                _sb.Append("\r\n");
+                _sb.Append(Environment.NewLine);
                 _sb.Append("****List of warnings and errors");
-                _sb.Append("\r\n");
-                _sb.Append("\r\n");
+                _sb.Append(Environment.NewLine);
+                _sb.Append(Environment.NewLine);
             }
 
 
-            _sb.Append($"{text} {txt}\r\n");
+            _sb.Append($"{text} {txt} {Environment.NewLine}");
             _sb.Append(Environment.NewLine);
         }
 
@@ -484,7 +485,7 @@ namespace WPFTester
         private bool _isAborted;
         private void btnCancel_Click_1(object sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show(@"You choose to stop conversation process.\r\n Are you sure?",
+            if (MessageBox.Show($@"You choose to stop conversation process.{Environment.NewLine}Are you sure?",
                                 @"Question",
                                 MessageBoxButton.YesNo,
                                 MessageBoxImage.Question) == MessageBoxResult.No)
