@@ -1,9 +1,8 @@
-﻿using Converter.Interface;
-using Microsoft.SqlServer.Management.Smo;
+﻿using Microsoft.SqlServer.Management.Smo;
 using System;
-using System.Diagnostics;
 using System.Text;
-using System.Linq;
+using static Microsoft.SqlServer.Management.Smo.SqlDataType;
+
 
 namespace Converter.Extension
 {
@@ -15,25 +14,27 @@ namespace Converter.Extension
         /// </summary>
         /// <param name="self"></param>
         /// <returns></returns>
-        public static string selectStm(this Table self)
+        public static string SelectStm(this Table self)
         {
-            StringBuilder buildInto = new StringBuilder();
+            var buildInto = new StringBuilder();
             int counter1 = 1;
             foreach (Column c in self.Columns)
             {
-                if (c.DataType.SqlDataType == SqlDataType.Xml)
+                if (c.DataType.SqlDataType == Xml)
                 {
                     buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(max) ) " + c.Name);
                 }
-                else if (c.DataType.SqlDataType == SqlDataType.HierarchyId || c.DataType.SqlDataType == SqlDataType.Geography || c.DataType.SqlDataType == SqlDataType.Geometry)
+                else if (c.DataType.SqlDataType == HierarchyId || c.DataType.SqlDataType == Geography ||
+                         c.DataType.SqlDataType == Geometry)
                 {
                     buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(1000) ) " + c.Name);
                 }
-                else if (c.DataType.SqlDataType == SqlDataType.Variant || c.DataType.SqlDataType == SqlDataType.Text || c.DataType.SqlDataType == SqlDataType.NText)
+                else if (c.DataType.SqlDataType == Variant || c.DataType.SqlDataType == Text ||
+                         c.DataType.SqlDataType == NText)
                 {
                     buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(max) ) " + c.Name);
                 }
-                else if (c.DataType.SqlDataType == SqlDataType.Image)
+                else if (c.DataType.SqlDataType == Image)
                 {
                     buildInto.Append("CAST(" + c.QName() + " AS VARBINARY(max) ) " + c.Name);
 
@@ -59,32 +60,22 @@ namespace Converter.Extension
             return retValue;
         }
 
-        /// <summary>
-        /// Setup IDENTITY_INSERT STATEMENT
-        /// </summary>
-        /// <param name="self"></param>
-        /// <returns></returns>
-        public static string identityInsStm(this Table self, bool isOn)
-        {
-            return "SET IDENTITY_INSERT " + self.FName() + (isOn ? " ON;" : " OFF");
-        }
+        public static string IdentityInsStm(this Table self, bool isOn) => "SET IDENTITY_INSERT " + self.FName() + (isOn ? " ON;" : " OFF");
 
         /// <summary>
         /// Build column list for insert
         /// </summary>
         /// <param name="self"></param>
         /// <returns></returns>
-        public static string insertStm(this Table self)
+        public static string InsertStm(this Table self)
         {
-            StringBuilder insertColumn = new StringBuilder();
+            var insertColumn = new StringBuilder();
             int counter = 1;
             foreach (Column c in self.Columns)
             {
                 insertColumn.Append(c.QName());
                 if (counter < self.Columns.Count)
-                {
-                    insertColumn.Append(",");
-                }
+                    insertColumn.Append($",");
                 counter++;
             }
             string retValue = insertColumn.ToString();
@@ -93,34 +84,31 @@ namespace Converter.Extension
         }
 
 
-        public static string fullInsertStm(this Table self, string selectStm, bool hasIdentites, string fullName)
+        public static string FullInsertStm(this Table self, string selectStm, bool hasIdentites, string fullName)
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             if (hasIdentites)
-                sb.Append(self.identityInsStm(true)); //set identity insert
+                sb.Append(self.IdentityInsStm(true)); //set identity insert
 
-            sb.Append(" INSERT INTO " + self.FName() + "(");
-            sb.Append(self.insertStm());
-            sb.Append(")");
+            sb.Append($" INSERT INTO  {self.FName()} ( {self.InsertStm() } )");
             sb.Append(Environment.NewLine);
-            sb.Append("SELECT ");
-
-            sb.Append(selectStm);
-            sb.Append(" FROM " + fullName);
+            sb.Append($"SELECT {selectStm}  FROM   {fullName}");
 
             if (hasIdentites)
-                sb.Append(self.identityInsStm(false)); //only one table per session has this value to ON
+                sb.Append(self.IdentityInsStm(false)); //only one table per session has this value to ON
 
             string retValue = sb.ToString();
+            sb = null;
             return retValue;
         }
 
-        public static string insertIntoStm(this Table self, string baseName, string fullName)
+        public static string InsertIntoStm(this Table self, string baseName, string fullName)
         {
-            StringBuilder sb = new StringBuilder();
-            sb.Append(" SELECT " + self.selectStm() + " INTO " + baseName + "." + fullName + " FROM " + self.FName());
+            var sb = new StringBuilder();
+            sb.Append($@" SELECT {self.SelectStm()} INTO {baseName}.{fullName} FROM {self.FName()}");
             string retValue = sb.ToString();
+            sb = null;
             return retValue;
         }
 

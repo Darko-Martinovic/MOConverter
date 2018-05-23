@@ -214,10 +214,10 @@ namespace Converter.Extension
                 {
                     logger.Log("Insert data ", newTable.FName());
                     //Insert into 
-                    Traditional.ExecuteNonQuery(self.insertIntoStm(InMemDatabase.Name, cnf.fullName));
+                    Traditional.ExecuteNonQuery(self.InsertIntoStm(InMemDatabase.Name, cnf.fullName));
                     //Insert statement
                     Table test = InMemDatabase.Tables[cnf.helperTableName, cnf.helperSchema];
-                    InMemDatabase.ExecuteNonQuery(newTable.fullInsertStm(test.selectStm(), hasIdentities, cnf.fullName));
+                    InMemDatabase.ExecuteNonQuery(newTable.FullInsertStm(test.SelectStm(), hasIdentities, cnf.fullName));
                     retValue = true;
                     logger.Log("OK ", newTable.FName());
                     //
