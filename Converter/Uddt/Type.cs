@@ -8,7 +8,7 @@ namespace Converter.Uddt
     {
         public static SqlDataType DetermineSqlDataType(string input, ref string html)
         {
-            SqlDataType retValue = SqlDataType.NVarChar;
+            var retValue = SqlDataType.NVarChar;
             try
             {
 
