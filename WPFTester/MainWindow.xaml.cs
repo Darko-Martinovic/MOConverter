@@ -552,7 +552,7 @@ namespace WPFTester
             if (_success)
             {
                 TimeSpan ts = _t2 - _t1;
-                MessageBox.Show($"Switching to in-memory OLTP finished successfully. Elapsed time {ts:dd.hh:mm:ss}", 
+                MessageBox.Show($@"Switching to in-memory OLTP finished successfully. Elapsed time {ts:dd\.hh\:mm\:ss}",
                                 @"Info", 
                                 MessageBoxButton.OK, 
                                MessageBoxImage.Information);
