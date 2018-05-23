@@ -2,13 +2,12 @@
 using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 
 namespace Converter.Extension
 {
     public static partial class TableExtension
     {
-        // back to traditional is not yet supported. It means is always true. 
+        // back to traditional is not yet supported. It means it is always true. 
         private const bool V = true;
 
         public static bool SwitchRelationsToMo(
@@ -40,7 +39,8 @@ namespace Converter.Extension
                 if (newFk.DeleteAction == ForeignKeyAction.Cascade)
                 {
                     newFk.DeleteAction = ForeignKeyAction.NoAction;
-                    logger.LogWarErr($"Warning {newFk.Name}", $" Delete action CASCADE is not supported {self.FName()}");
+                    logger.LogWarErr($"Warning {newFk.Name}",
+                        $" Delete action CASCADE is not supported {self.FName()}");
                 }
                 if (newFk.UpdateAction == ForeignKeyAction.Cascade)
                 {
@@ -55,7 +55,7 @@ namespace Converter.Extension
                 }
                 catch (Exception ex)
                 {
-                    error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
+                    error = string.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                                        .Select(ex1 => ex1.Message));
                     logger.LogWarErr("Ralation Error", newFk.Name + " " + error);
                     return false;

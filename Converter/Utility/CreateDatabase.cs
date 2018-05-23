@@ -50,7 +50,7 @@ namespace Converter.Utility
                 catch (Exception ex)
                 {
                     
-                    error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
+                    error = string.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                         .Select(ex1 => ex1.Message));
 
                     return false;
@@ -85,7 +85,7 @@ namespace Converter.Utility
                     catch (Exception ex)
                     {
                         
-                        error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
+                        error = string.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                             .Select(ex1 => ex1.Message));
                         return false;
                     }
@@ -107,7 +107,7 @@ namespace Converter.Utility
                     catch (Exception ex)
                     {
                        
-                        error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
+                        error = string.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                             .Select(ex1 => ex1.Message));
                         return false;
                     }
