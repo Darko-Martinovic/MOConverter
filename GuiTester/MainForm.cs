@@ -33,8 +33,8 @@ namespace GuiTester
         {
             cmbAuth.SelectedIndex = 0;
             //load the configuration
-            cnf = new Converter.Configuration.Configuration();
-            cnf.LoadConfig();
+            _cnf = new Converter.Configuration.Configuration();
+            _cnf.LoadConfig();
             txtServer.Focus();
         }
 
@@ -49,8 +49,8 @@ namespace GuiTester
             if (txtServer.Text.Equals(string.Empty))
             {
                 txtServer.Focus();
-                MessageBox.Show("Please enter the valid server name",
-                                 "Error",
+                MessageBox.Show(@"Please enter the valid server name",
+                                 @"Error",
                                  MessageBoxButtons.OK,
                                  MessageBoxIcon.Error);
                 return;
@@ -58,8 +58,8 @@ namespace GuiTester
             if (cmbAuth.SelectedIndex == -1)
             {
                 cmbAuth.Focus();
-                MessageBox.Show("Please choose authentication type!",
-                                "Error", 
+                MessageBox.Show(@"Please choose authentication type!",
+                                @"Error", 
                                 MessageBoxButtons.OK, 
                                 MessageBoxIcon.Error);
                 return;
@@ -67,16 +67,16 @@ namespace GuiTester
             if (cmbDatabase.SelectedIndex == -1)
             {
                 cmbDatabase.Focus();
-                MessageBox.Show("Please choose database",
-                                "Error", 
+                MessageBox.Show(@"Please choose database",
+                                @"Error", 
                                 MessageBoxButtons.OK, 
                                 MessageBoxIcon.Error);
                 return;
             }
             if (chkNewDatabase.Checked == false && cmbDatabase.Text.Equals(cmbDestination.Text))
             {
-                MessageBox.Show("Source and destination are the same. Not allowed!",
-                                "Error", 
+                MessageBox.Show(@"Source and destination are the same. Not allowed!",
+                                @"Error", 
                                 MessageBoxButtons.OK, 
                                 MessageBoxIcon.Error);
                 return;
@@ -84,42 +84,43 @@ namespace GuiTester
             }
 
             //Create inputs
-            i = new Inputs();
-            i.serverName = txtServer.Text;
-            i.databaseName = cmbDatabase.Text;
-            i.inMemoryDataBaseName = cmbDestination.Text;
-            i.userName = txtUserName.Text;
-            i.password = txtPassword.Text;
-            i.isWindows = cmbAuth.SelectedIndex == 0 ? true : false;
-            i.createNew = chkNewDatabase.Checked;
-            if (i.createNew)
-                i.inMemoryDataBaseName = i.databaseName + "_InMem";
+            _i = new Inputs
+            {
+                ServerName = txtServer.Text,
+                DatabaseName = cmbDatabase.Text,
+                InMemoryDataBaseName = cmbDestination.Text,
+                UserName = txtUserName.Text,
+                Password = txtPassword.Text,
+                IsWindows = cmbAuth.SelectedIndex == 0 ? true : false,
+                CreateNew = chkNewDatabase.Checked
+            };
+            if (_i.CreateNew)
+                _i.InMemoryDataBaseName = _i.DatabaseName + "_InMem";
             //create options
-            o = new Options();
-            o.CopyData = chkCopyData.Checked;
+            _o = new Options {CopyData = chkCopyData.Checked};
             if (rbHash.Checked)
-                o.UseHashIndexes = Options.IndexDecision.Hash;
+                _o.UseHashIndexes = Options.IndexDecision.Hash;
             else if (rbRange.Checked)
-                o.UseHashIndexes = Options.IndexDecision.Range;
+                _o.UseHashIndexes = Options.IndexDecision.Range;
             else
-                o.UseHashIndexes = Options.IndexDecision.ExtendedPropery;
+                _o.UseHashIndexes = Options.IndexDecision.ExtendedPropery;
 
             //o.DropOnDestination = chkDropOnDestination.Checked;
-            o.SchemaContains = txtSchema.Text.Trim();
-            o.TableContains = txtTableContains.Text.Trim();
+            _o.SchemaContains = txtSchema.Text.Trim();
+            _o.TableContains = txtTableContains.Text.Trim();
 
             Server server = null;
             try
             {
-                ServerConnection cnn = new ServerConnection(i.serverName);
+                ServerConnection cnn = new ServerConnection(_i.ServerName);
                 cnn.Connect();
                 server = new Server(cnn);
 
             }
             catch (Exception ex)
             {
-                MessageBox.Show("I'm unable to connect to the server " + "" + i.serverName + "" + "\r\n" + ex.Message,
-                                "Error",
+                MessageBox.Show($@"I'm unable to connect to the server {_i.ServerName}  {ex.Message}",
+                                @"Error",
                                 MessageBoxButtons.OK, 
                                 MessageBoxIcon.Error);
                 return;
@@ -128,12 +129,12 @@ namespace GuiTester
                     txtServer.Text,
                     "master",
                     cmbAuth.SelectedIndex == 0 ? true : false,
-                    txtUserName.Text, txtPassword.Text), " SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1) ? true : false;
+                    txtUserName.Text, txtPassword.Text), $@" SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1) ? true : false;
 
             if ( isSysAdmin== false)
             {
-                MessageBox.Show("You should connect as a member of sysadmin fixed server role",
-                                "Error", 
+                MessageBox.Show(@"You should connect as a member of sysadmin fixed server role",
+                                @"Error", 
                                 MessageBoxButtons.OK, 
                                 MessageBoxIcon.Error);
                 return;
@@ -141,19 +142,19 @@ namespace GuiTester
 
 
 
-            if (new Version(server.VersionString) < new Version(C_SERVER_VERSION))
+            if (new Version(server.VersionString) < new Version(CServerVersion))
             {
-                MessageBox.Show("The server has to be SQL2016 SP2 or higher",
-                                "Error",
+                MessageBox.Show(@"The server has to be SQL2016 SP2 or higher",
+                                @"Error",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Error);
                 return;
             }
 
-            if (server.Databases[i.databaseName] == null)
+            if (server.Databases[_i.DatabaseName] == null)
             {
-                MessageBox.Show("Choose the database!",
-                                "Error",
+                MessageBox.Show(@"Choose the database!",
+                                @"Error",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Error);
                 cmbDatabase.SelectedItem = null;
@@ -161,10 +162,10 @@ namespace GuiTester
 
             }
 
-            if (server.Databases[i.databaseName].HasMemoryOptimizedObjects)
+            if (server.Databases[_i.DatabaseName].HasMemoryOptimizedObjects)
             {
-                MessageBox.Show("The source database contains Memory Optimized FileGroup. It is not allowed!",
-                                "Error", 
+                MessageBox.Show(@"The source database contains Memory Optimized FileGroup. It is not allowed!",
+                                @"Error", 
                                 MessageBoxButtons.OK, 
                                 MessageBoxIcon.Error);
                 return;
@@ -172,19 +173,19 @@ namespace GuiTester
             string error = "";
 
 
-            if (i.createNew)
+            if (_i.CreateNew)
             {
-                if (MessageBox.Show("You choose to create a new database \"" + i.databaseName + "_InMem." + "\"\r\n" +" Are you sure?",
-                                    "Question", 
+                if (MessageBox.Show($@"You choose to create a new database {_i.DatabaseName}_InMem. Are you sure?",
+                                    @"Question", 
                                     MessageBoxButtons.YesNo, 
                                     MessageBoxIcon.Question) == DialogResult.No)
                 {
                     return;
                 }
-                if (Converter.Utility.CreateDatabase.Create(server, i.databaseName + "_InMem", ref error, cnf.FileGroupName, cnf.FileName, cnf.MoPath) == false)
+                if (Converter.Utility.CreateDatabase.Create(server, _i.DatabaseName + "_InMem", ref error, _cnf.FileGroupName, _cnf.FileName, _cnf.MoPath) == false)
                 {
-                    MessageBox.Show("An error occurs while creating the database!" + Environment.NewLine + error,
-                                    "Error",
+                    MessageBox.Show(@"An error occurs while creating the database!" + Environment.NewLine + error,
+                                    @"Error",
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Error);
                     return;
@@ -192,17 +193,18 @@ namespace GuiTester
             }
             else
             {
-                if (MessageBox.Show("You choose to convert the database \"" + i.databaseName.ToUpper() + "\"" + " to In-Mem \"" + i.inMemoryDataBaseName.ToUpper() + "\"\r\n" + "Are you sure?",
-                                    "Question", 
+                if (MessageBox.Show($@"You choose to convert the database {_i.DatabaseName.ToUpper()} to In-Mem  {_i.InMemoryDataBaseName.ToUpper()}.
+                                                        Are you sure?",
+                                    @"Question", 
                                     MessageBoxButtons.YesNo,
                                     MessageBoxIcon.Question) == DialogResult.No)
                 {
                     return;
                 }
-                if (Converter.Utility.CreateDatabase.Create(server, i.inMemoryDataBaseName, ref error, cnf.FileGroupName, cnf.FileName, cnf.MoPath) == false)
+                if (Converter.Utility.CreateDatabase.Create(server, _i.InMemoryDataBaseName, ref error, _cnf.FileGroupName, _cnf.FileName, _cnf.MoPath) == false)
                 {
-                    MessageBox.Show("An error occurs while creating the database!",
-                                    "Error",
+                    MessageBox.Show(@"An error occurs while creating the database!",
+                                    @"Error",
                                     MessageBoxButtons.OK, 
                                     MessageBoxIcon.Error);
                     return;
@@ -214,7 +216,7 @@ namespace GuiTester
 
             ProgressBar1.Visible = true;
             ProgressBar1.Minimum = 1;
-            ProgressBar1.Maximum = server.Databases[i.databaseName].Tables.Count;
+            ProgressBar1.Maximum = server.Databases[_i.DatabaseName].Tables.Count;
             ProgressBar1.Step = 1;
             ProgressBar1.Show();
 
@@ -225,37 +227,38 @@ namespace GuiTester
          
 
 
-            t1 = DateTime.Now;
-            mainObr = new Thread(StartConversion);
+            _t1 = DateTime.Now;
+            _mainObr = new Thread(StartConversion);
             Timer1.Enabled = true;
             Timer1.Interval = 500;
-            mainObr.Start();
+            _mainObr.Start();
             
 
 
         }
 
         #region " Fields & constants "
-        private bool isError = false;
-        private Thread mainObr = null;
-        private Inputs i = null;
-        private Options o = null;
+
+        private bool _isError;
+        private Thread _mainObr; 
+        private Inputs _i;
+        private Options _o ;
 
         //
         // https://support.microsoft.com/en-us/help/3177312/sql-server-2016-build-versions
         // SQL Server 2016 SP2
-        private const string C_SERVER_VERSION = "13.0.5026.0";
+        private const string CServerVersion = "13.0.5026.0";
 
         //
         // New features available with SQL Server 2017
         // 
-        private const string C_NEW_FEATURES_VERSION = "14.0.1000.169";
+        private const string CNewFeaturesVersion = "14.0.1000.169";
 
 
-        private Converter.Configuration.Configuration cnf = null;
-        private DateTime t1;
-        private DateTime t2;
-        private bool success = false;
+        private Converter.Configuration.Configuration _cnf = null;
+        private DateTime _t1;
+        private DateTime _t2;
+        private bool _success = false;
         #endregion
 
         #region " Start the conversion "
@@ -265,28 +268,28 @@ namespace GuiTester
         /// </summary>
         private void StartConversion()
         {
-            ServerConnection cnn = new ServerConnection(i.serverName);
+            ServerConnection cnn = new ServerConnection(_i.ServerName);
             cnn.Connect();
             Server server = new Server(cnn);
 
-            Database db = server.Databases[i.databaseName];
+            Database db = server.Databases[_i.DatabaseName];
             // Connect to the In-Memory Database
-            ServerConnection cnnInMem = new ServerConnection(i.serverName);
+            ServerConnection cnnInMem = new ServerConnection(_i.ServerName);
             cnnInMem.Connect();
             Server serverInMem = new Server(cnnInMem);
-            Database dbInMemory = serverInMem.Databases[i.inMemoryDataBaseName];
+            Database dbInMemory = serverInMem.Databases[_i.InMemoryDataBaseName];
 
             // new features available starting with SQL Server 2017
             SQLServerMoFeatures enumFeatures = SQLServerMoFeatures.SQLServer2016;
-            if (new Version(server.VersionString) >= new Version(C_NEW_FEATURES_VERSION))
+            if (new Version(server.VersionString) >= new Version(CNewFeaturesVersion))
             {
                 enumFeatures = SQLServerMoFeatures.SQLServer2017;
             }
-            success = db.SwitchToMo(
+            _success = db.SwitchToMo(
                                     dbInMemory, 
                                     (ILog)this, 
-                                    cnf, 
-                                    o,
+                                    _cnf, 
+                                    _o,
                                     enumFeatures);
 
       
@@ -393,6 +396,7 @@ namespace GuiTester
 
         #region " The interface( ILog )implementation "
 
+       
         void ILog.SetValue(int text)
         {
             SetProgresBarValue(text);
@@ -411,20 +415,21 @@ namespace GuiTester
 
 
 
-        void ILog.Log(string text, string txtDescription)
+        void ILog.Log(string text, string txt)
         {
 
             SetTextCode(text);
-            SetTextDescription(txtDescription);
+            SetTextDescription(txt);
 
         }
         private StringBuilder sb = null;
-        void ILog.LogWarErr(string text, string txtDescription)
+        void ILog.LogWarErr(string text, string txt)
         {
             if (sb == null)
             {
                 sb = new StringBuilder();
-                sb.Append("****Summary report - converting  " + i.databaseName + " to IN-MEM OLTP " + i.inMemoryDataBaseName + " on server " + i.serverName + "\r\n");
+                sb.Append(
+                    $"****Summary report - converting  {_i.DatabaseName} to IN-MEM OLTP {_i.InMemoryDataBaseName} on server {_i.ServerName}\r\n");
                 sb.Append("\r\n");
                 sb.Append("****List of warnings and errors");
                 sb.Append("\r\n");
@@ -432,55 +437,39 @@ namespace GuiTester
             }
                 
 
-            sb.Append(text + " " + txtDescription + "\r\n");
+            sb.Append(text + " " + txt + "\r\n");
             sb.Append(Environment.NewLine);
         }
 
-        int mCurrentItem;
-        int ILog.CurrentItem
-        {
-            get
-            {
-                return mCurrentItem;
-            }
-            set
-            {
-                mCurrentItem = value;
-            }
-        }
-        int mCounter;
-        int ILog.Counter
-        {
-            get
-            {
-                return mCounter;
-            }
-            set
-            {
-                mCounter = value;
-            }
-        }
+        int ILog.CurrentItem { get; set; }
+
+        int ILog.Counter { get; set; }
+
         #endregion
 
         #region " Cancel the conversation process "
 
-        private bool isAborted = false;
+        private bool _isAborted = false;
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            if (MessageBox.Show("You choose to stop conversation process.\r\n Are you sure?", "Question", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+            if (MessageBox.Show(@"You choose to stop conversation process.
+                                     Are you sure?", 
+                                @"Question", 
+                                MessageBoxButtons.YesNo, 
+                                MessageBoxIcon.Question) == DialogResult.No)
             {
                 return;
             }
 
-            if (mainObr != null)
+            if (_mainObr != null)
             {
                 try
                 {
-                    mainObr.Abort();
-                    while (mainObr.ThreadState != System.Threading.ThreadState.Aborted)
+                    _mainObr.Abort();
+                    while (_mainObr.ThreadState != System.Threading.ThreadState.Aborted)
                     {
                         Application.DoEvents();
-                        mainObr.Abort();
+                        _mainObr.Abort();
                     }
 
                 }
@@ -489,11 +478,11 @@ namespace GuiTester
 
                 }
             }
-            isAborted = true;
+            _isAborted = true;
             Timer1.Enabled = false;
-            lblOveral.Text = String.Empty;
-            txtCode.Text = String.Empty;
-            txtDescription.Text = String.Empty;
+            lblOveral.Text = string.Empty;
+            txtCode.Text = string.Empty;
+            txtDescription.Text = string.Empty;
 
             btnCancel.Enabled = false;
             ProgressBar1.Visible = false;
@@ -509,37 +498,40 @@ namespace GuiTester
         #region " The timer controls the working thread "
         private void Timer1_Tick_1(object sender, EventArgs e)
         {
-            if (mainObr == null || mainObr.IsAlive)
+            if (_mainObr == null || _mainObr.IsAlive)
             {
                 return;
             }
             try
             {
                 Timer1.Enabled = false;
-                mainObr.Join();
-                mainObr = null;
+                _mainObr.Join();
+                _mainObr = null;
 
             }
             catch (Exception ex)
             {
 
             }
-            t2 = DateTime.Now;
+            _t2 = DateTime.Now;
 
             ProgressBar1.Visible = false;
             btnCancel.Enabled = false;
             btnConvertToMO.Enabled = true;
             grpOptions.Enabled = true;
             grpConnection.Enabled = true;
-            if (success)
+            if (_success)
             {
-                TimeSpan ts = t2 - t1;
-                MessageBox.Show("Switching to in-memory OLTP finished successfully. Elapsed time " + ts.ToString(@"dd\.hh\:mm\:ss"), "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                TimeSpan ts = _t2 - _t1;
+                MessageBox.Show($@"Switching to in-memory OLTP finished successfully. Elapsed time {ts:dd\.hh\:mm\:ss}", 
+                                @"Info", 
+                                MessageBoxButtons.OK, 
+                                MessageBoxIcon.Information);
             }
             SetLabelText("");
-            if (isAborted == false)
+            if (_isAborted == false)
             {
-                string fileName = i.databaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
+                string fileName = _i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
                 if (File.Exists(fileName))
                     File.Delete(fileName);
                 File.WriteAllText(fileName, sb.ToString());
@@ -548,11 +540,11 @@ namespace GuiTester
             }
             else
             {
-                isAborted = false;
+                _isAborted = false;
             }
 
             SetLabelText("");
-            cnf.LoadConfig();
+            _cnf.LoadConfig();
             sb = null;
 
 
@@ -583,8 +575,8 @@ namespace GuiTester
             if (txtServer.Text.Trim().Equals(string.Empty))
             {
                 txtServer.Focus();
-                MessageBox.Show("Please enter the valid server name",
-                                 "Error",
+                MessageBox.Show(@"Please enter the valid server name",
+                                 @"Error",
                                  MessageBoxButtons.OK,
                                  MessageBoxIcon.Error);
                 return;
@@ -599,8 +591,8 @@ namespace GuiTester
         {
             if (cmbAuth.SelectedItem != null)
             {
-                if (isError)
-                    isError = false;
+                if (_isError)
+                    _isError = false;
 
                 if (cmbAuth.SelectedIndex == 0)
                 {
@@ -623,21 +615,25 @@ namespace GuiTester
             if (txtServer.Text.Trim().Equals(string.Empty))
             {
                 txtServer.Focus();
-                MessageBox.Show("Please enter the valid server name",
-                                 "Error",
+                MessageBox.Show(@"Please enter the valid server name",
+                                 @"Error",
                                  MessageBoxButtons.OK,
                                  MessageBoxIcon.Error);
                 return;
 
             }
-            if (cmbAuth.SelectedIndex != 0 && (txtUserName.Text.Trim().Equals(string.Empty) || txtPassword.Text.Trim().Equals(string.Empty)))
+            if (cmbAuth.SelectedIndex != 0 && (txtUserName.Text.Trim().Equals(string.Empty) ||
+                                               txtPassword.Text.Trim().Equals(string.Empty)))
             {
-                MessageBox.Show("Please enter userName and password", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                if (isError)
-                    isError = false;
+                MessageBox.Show(@"Please enter userName and password",
+                                @"Error", 
+                                 MessageBoxButtons.OK, 
+                                 MessageBoxIcon.Error);
+                if (_isError)
+                    _isError = false;
                 return;
             }
-            if (isError == false)
+            if (_isError == false)
             {
                 BindDataBases(cmbDatabase);
             }
@@ -645,7 +641,6 @@ namespace GuiTester
 
         private void BindDataBases(ComboBox cmb)
         {
-            string error = "";
             cmb.Items.Clear();
             DataSet ds = DataAccess.GetDataSet(
                 DataAccess.GetConnectionString(
@@ -656,11 +651,14 @@ namespace GuiTester
                                                                 FROM sys.databases
                                                                 WHERE state = 0 
                                                                     AND is_read_only = 0 
-                                                                ORDER BY name", null, out error);
+                                                                ORDER BY name", null, out var error);
             if (error.Equals(string.Empty) == false)
             {
-                isError = true;
-                MessageBox.Show("Error binding database information : " + error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _isError = true;
+                MessageBox.Show($@"Error binding database information : {error}",
+                                @"Error", 
+                                 MessageBoxButtons.OK, 
+                                 MessageBoxIcon.Error);
                 ds = null;
             }
             else

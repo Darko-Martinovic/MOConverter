@@ -2,25 +2,30 @@
 using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace Converter.Extension
 {
     public static class StoredProcedureExtension
     {
 
-        public static string FName(this StoredProcedure self)
-        {
-            return "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
-        }
+        public static string FName(this StoredProcedure self) => "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
 
-        public static bool SwitchToMo(this StoredProcedure self, Database InMemDatabase, Database Traditional, Configuration.Configuration cnf, ref string error, ILog logger)
+        public static bool SwitchToMo(
+                                    this StoredProcedure self, 
+                                    Database inMemDatabase, 
+                                    Database traditional, 
+                                    Configuration.Configuration cnf, 
+                                    ref string error, 
+                                    ILog logger
+            )
         {
-            bool retValue = false;
+            var retValue = false;
             if (self.IsSystemObject)
+            {
                 return true;
+            }
 
-            if (InMemDatabase.StoredProcedures.Contains(self.Name, self.Schema))
+            if (inMemDatabase.StoredProcedures.Contains(self.Name, self.Schema))
             {
                 logger.Log("\t" + "Already exists", self.FName());
                 return true;
@@ -28,7 +33,7 @@ namespace Converter.Extension
 
 
             logger.Log("SP", self.FName());
-            StoredProcedure newsp = new StoredProcedure(InMemDatabase, self.Name, self.Schema);
+            StoredProcedure newsp = new StoredProcedure(inMemDatabase, self.Name, self.Schema);
             newsp.CopyPropertiesFrom(self);
             try
             {

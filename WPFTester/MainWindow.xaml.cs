@@ -86,15 +86,15 @@ namespace WPFTester
 
             //Create inputs
             i = new Inputs();
-            i.serverName = txtServer.Text;
-            i.databaseName = cmbDatabase.Text;
-            i.inMemoryDataBaseName = cmbDestination.Text;
-            i.userName = txtUserName.Text;
-            i.password = txtPassword.Password;
-            i.isWindows = cmbAuth.SelectedIndex == 0 ? true : false;
-            i.createNew = chkNewDatabase.IsChecked == true;
-            if (i.createNew)
-                i.inMemoryDataBaseName = i.databaseName + "_InMem";
+            i.ServerName = txtServer.Text;
+            i.DatabaseName = cmbDatabase.Text;
+            i.InMemoryDataBaseName = cmbDestination.Text;
+            i.UserName = txtUserName.Text;
+            i.Password = txtPassword.Password;
+            i.IsWindows = cmbAuth.SelectedIndex == 0 ? true : false;
+            i.CreateNew = chkNewDatabase.IsChecked == true;
+            if (i.CreateNew)
+                i.InMemoryDataBaseName = i.DatabaseName + "_InMem";
             //create options
             o = new Options();
             o.CopyData = chkCopyData.IsChecked == true;
@@ -114,14 +114,14 @@ namespace WPFTester
             Server server = null;
             try
             {
-                ServerConnection cnn = new ServerConnection(i.serverName);
+                ServerConnection cnn = new ServerConnection(i.ServerName);
                 cnn.Connect();
                 server = new Server(cnn);
 
             }
             catch (Exception ex)
             {
-                MessageBox.Show("I'm unable to connect to the server " + "" + i.serverName + "" + "\r\n" + ex.Message,
+                MessageBox.Show("I'm unable to connect to the server " + "" + i.ServerName + "" + "\r\n" + ex.Message,
                                 "Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
@@ -152,7 +152,7 @@ namespace WPFTester
                                  MessageBoxImage.Error);
                 return;
             }
-            if (server.Databases[i.databaseName] == null)
+            if (server.Databases[i.DatabaseName] == null)
             {
                 MessageBox.Show("Choose the database!",
                                 "Error",
@@ -163,7 +163,7 @@ namespace WPFTester
 
             }
 
-            if (server.Databases[i.databaseName].HasMemoryOptimizedObjects)
+            if (server.Databases[i.DatabaseName].HasMemoryOptimizedObjects)
             {
                 MessageBox.Show("The source database contains Memory Optimized FileGroup. It is not allowed!",
                                 "Error",
@@ -174,16 +174,16 @@ namespace WPFTester
             string error = "";
 
 
-            if (i.createNew)
+            if (i.CreateNew)
             {
-                if (MessageBox.Show("You choose to create a new database \"" + i.databaseName + "_InMem." + "\"\r\n" + " Are you sure?",
+                if (MessageBox.Show("You choose to create a new database \"" + i.DatabaseName + "_InMem." + "\"\r\n" + " Are you sure?",
                                     "Question",
                                     MessageBoxButton.YesNo,
                                     MessageBoxImage.Question) == MessageBoxResult.No)
                 {
                     return;
                 }
-                if (Converter.Utility.CreateDatabase.Create(server, i.databaseName + "_InMem", ref error, cnf.FileGroupName, cnf.FileName, cnf.MoPath) == false)
+                if (Converter.Utility.CreateDatabase.Create(server, i.DatabaseName + "_InMem", ref error, cnf.FileGroupName, cnf.FileName, cnf.MoPath) == false)
                 {
                     MessageBox.Show("An error occurs while creating the database!" + Environment.NewLine + error,
                                     "Error",
@@ -194,14 +194,14 @@ namespace WPFTester
             }
             else
             {
-                if (MessageBox.Show("You choose to convert the database \"" + i.databaseName.ToUpper() + "\"" + " to In-Mem \"" + i.inMemoryDataBaseName.ToUpper() + "\"\r\n" + "Are you sure?",
+                if (MessageBox.Show("You choose to convert the database \"" + i.DatabaseName.ToUpper() + "\"" + " to In-Mem \"" + i.InMemoryDataBaseName.ToUpper() + "\"\r\n" + "Are you sure?",
                                     "Question",
                                     MessageBoxButton.YesNo,
                                     MessageBoxImage.Question) == MessageBoxResult.No)
                 {
                     return;
                 }
-                if (Converter.Utility.CreateDatabase.Create(server, i.inMemoryDataBaseName, ref error, cnf.FileGroupName, cnf.FileName, cnf.MoPath) == false)
+                if (Converter.Utility.CreateDatabase.Create(server, i.InMemoryDataBaseName, ref error, cnf.FileGroupName, cnf.FileName, cnf.MoPath) == false)
                 {
                     MessageBox.Show("An error occurs while creating the database!",
                                     "Error",
@@ -216,7 +216,7 @@ namespace WPFTester
 
             ProgressBar1.Visibility = Visibility.Visible;
             ProgressBar1.Minimum = 1;
-            ProgressBar1.Maximum = server.Databases[i.databaseName].Tables.Count;
+            ProgressBar1.Maximum = server.Databases[i.DatabaseName].Tables.Count;
 
             SetupRows(false);
             btnConvertToMO.IsEnabled = false;
@@ -279,16 +279,16 @@ namespace WPFTester
         private void StartConversion()
         {
 
-            ServerConnection cnn = new ServerConnection(i.serverName);
+            ServerConnection cnn = new ServerConnection(i.ServerName);
             cnn.Connect();
             Server server = new Server(cnn);
 
-            Database db = server.Databases[i.databaseName];
+            Database db = server.Databases[i.DatabaseName];
             // Connect to the In-Memory Database
-            ServerConnection cnnInMem = new ServerConnection(i.serverName);
+            ServerConnection cnnInMem = new ServerConnection(i.ServerName);
             cnnInMem.Connect();
             Server serverInMem = new Server(cnnInMem);
-            Database dbInMemory = serverInMem.Databases[i.inMemoryDataBaseName];
+            Database dbInMemory = serverInMem.Databases[i.InMemoryDataBaseName];
 
             // new features available starting with SQL Server 2017
             SQLServerMoFeatures enumFeatures = SQLServerMoFeatures.SQLServer2016;
@@ -449,7 +449,7 @@ namespace WPFTester
             if (sb == null)
             {
                 sb = new StringBuilder();
-                sb.Append("****Summary report - converting  " + i.databaseName + " to IN-MEM OLTP " + i.inMemoryDataBaseName + " on server " + i.serverName + "\r\n");
+                sb.Append("****Summary report - converting  " + i.DatabaseName + " to IN-MEM OLTP " + i.InMemoryDataBaseName + " on server " + i.ServerName + "\r\n");
                 sb.Append("\r\n");
                 sb.Append("****List of warnings and errors");
                 sb.Append("\r\n");
@@ -558,7 +558,7 @@ namespace WPFTester
 
             if (isAborted == false)
             {
-                string fileName = i.databaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
+                string fileName = i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
                 if (File.Exists(fileName))
                     File.Delete(fileName);
                 File.WriteAllText(fileName, sb.ToString());

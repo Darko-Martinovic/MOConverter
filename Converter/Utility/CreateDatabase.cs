@@ -8,19 +8,27 @@ namespace Converter.Utility
     public static class CreateDatabase
     {
 
-        public static bool Create(Server srv, string databaseName, ref string error,string fileGroupName, string fileName,string path)
+        public static bool Create(
+                                   Server srv, 
+                                   string databaseName, 
+                                   ref string error,
+                                   string fileGroupName, 
+                                   string fileName,
+                                   string path
+            )
         {
-            bool retValue = false;
-            bool exist = false;
-            if (srv.Databases[databaseName] != null)
-                exist = true;
+            var retValue = false;
+            var exist = srv.Databases[databaseName] != null;
+
             if (exist == false)
             {
-                Database dbnew = new Database(srv, databaseName);
-                // ON EXPRESS EDITION could be true which on the other hand results with failure in database creation
-                dbnew.AutoClose = false;
-                dbnew.RecoveryModel = RecoveryModel.Simple;
-  
+                var dbnew = new Database(srv, databaseName)
+                {
+                    // ON EXPRESS EDITION could be true which on the other hand results with failure in database creation
+                    AutoClose = false,
+                    RecoveryModel = RecoveryModel.Simple
+                };
+
 
                 srv.Databases.Add(dbnew);
                 try
@@ -28,8 +36,8 @@ namespace Converter.Utility
                     srv.Databases[databaseName].Create();
                     srv.Refresh();
                    
-                    dbnew.ExecuteNonQuery(string.Format("ALTER DATABASE {0}     " +
-                   " SET MEMORY_OPTIMIZED_ELEVATE_TO_SNAPSHOT = ON; ", dbnew.Name));
+                    dbnew.ExecuteNonQuery($"ALTER DATABASE {dbnew.Name}     " +
+                                          " SET MEMORY_OPTIMIZED_ELEVATE_TO_SNAPSHOT = ON; ");
 
                     if (dbnew.CompatibilityLevel < CompatibilityLevel.Version130)
                     {
@@ -45,13 +53,13 @@ namespace Converter.Utility
                     error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                         .Select(ex1 => ex1.Message));
 
-                    return retValue;
+                    return false;
                 }
             }
 
-            bool isMemoryOptimizedFileGropuExists = false;
+            var isMemoryOptimizedFileGropuExists = false;
 
-            Database db = srv.Databases[databaseName];
+            var db = srv.Databases[databaseName];
 
             foreach (FileGroup f in db.FileGroups)
             {
@@ -79,8 +87,7 @@ namespace Converter.Utility
                         
                         error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                             .Select(ex1 => ex1.Message));
-                        retValue = false;
-                        return retValue;
+                        return false;
                     }
 
                 }
@@ -102,8 +109,7 @@ namespace Converter.Utility
                        
                         error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                             .Select(ex1 => ex1.Message));
-                        retValue = false;
-                        return retValue;
+                        return false;
                     }
 
                 }

@@ -2,25 +2,27 @@
 using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace Converter.Extension
 {
     public static class ViewExtension
     {
+        internal static string FName(this View self) => "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
 
-        public static string FName(this View self)
-        {
-            return "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
-        }
-
-        public static bool SwitchToMo(this View self, Database InMemDatabase, Database Traditional, Configuration.Configuration cnf, ref string error, ILog logger)
+        public static bool SwitchToMo(
+                                     this View self, 
+                                     Database inMemDatabase, 
+                                     Database traditional,
+                                     Configuration.Configuration cnf, 
+                                     ref string error, 
+                                     ILog logger
+            )
         {
             bool retValue = false;
             if (self.IsSystemObject)
                 return true;
 
-            if (InMemDatabase.Views.Contains(self.Name, self.Schema))
+            if (inMemDatabase.Views.Contains(self.Name, self.Schema))
             {
                 logger.Log("\t" + "Already exists", self.FName());
                 return true;
@@ -28,7 +30,7 @@ namespace Converter.Extension
 
 
             logger.Log("VIEW", self.FName());
-            View newsp = new View(InMemDatabase, self.Name, self.Schema);
+            View newsp = new View(inMemDatabase, self.Name, self.Schema);
             newsp.CopyPropertiesFrom(self);
             try
             {

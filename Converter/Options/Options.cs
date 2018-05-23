@@ -9,47 +9,10 @@ namespace Converter.Options
             Range = 1,
             ExtendedPropery = 2
         }
-
-
-        private bool mCopyData = true;
-        public bool CopyData
-        {
-            get { return mCopyData; }
-            set { mCopyData = value; }
-        }
-
-
-        private IndexDecision mUseHashIndexes = IndexDecision.Hash;
-        public IndexDecision UseHashIndexes
-        {
-            get { return mUseHashIndexes; }
-            set { mUseHashIndexes = value; }
-        }
-
-
-        private bool mDropOnDestination = false;
-        public bool DropOnDestination
-        {
-            get { return mDropOnDestination; }
-            set { mDropOnDestination = value; }
-        }
-
-
-        private string mSchemaContains = string.Empty;
-        public string SchemaContains
-        {
-            get { return mSchemaContains; }
-            set { mSchemaContains = value; }
-        }
-
-        private string mTableContains = string.Empty;
-        public string TableContains
-        {
-            get { return mTableContains; }
-            set { mTableContains = value; }
-        }
-
-
-
+        public bool CopyData { get; set; } = true;
+        public IndexDecision UseHashIndexes { get; set; } = IndexDecision.Hash;
+        public bool DropOnDestination { get; set; } = false;
+        public string SchemaContains { get; set; } = string.Empty;
+        public string TableContains { get; set; } = string.Empty;
     }
 }

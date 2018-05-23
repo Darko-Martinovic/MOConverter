@@ -24,38 +24,27 @@ namespace Converter.Extension
         public static void CopyPropertiesFrom(this object self, object parent)
         {
             PropertyInfo[] fromProperties = parent.GetType().GetProperties();
-            PropertyInfo[] toProperties = self.GetType().GetProperties();
-            PropertyInfo toProperty = null;
+            PropertyInfo toProperty;
 
 
             foreach (var fromProperty in fromProperties)
             {
                 if (fromProperty.CanWrite == false)
-                {
                     continue;
-                }
                 if (fromProperty.Name.ToLower().Equals("parent") || fromProperty.Name.ToLower().Equals("name"))
-                {
                     continue;
-                }
-                if (self.GetType() == typeof(Column))
+                switch (self)
                 {
-                    if ("GraphType_ColumnEncryptionKeyID_ColumnEncryptionKeyName_EncryptionAlgorithm_EncryptionType_DistributionColumnName_IsDistributedColumn".Contains(fromProperty.Name))
-                        continue;
-                }
-                else if (self.GetType() == typeof(UserDefinedFunction))
-                {
-                    if ("AssemblyName_ClassName_ExecutionContext_ExecutionContextPrincipal_FunctionType_IsEncrypted_IsSchemaBound_MethodName_TableVariableName".Contains(fromProperty.Name))
-                        continue;
-                }
-                else if (self.GetType() == typeof(StoredProcedure))
-                {
-                    if ("AssemblyName_ClassName_ExecutionContext_ExecutionContextPrincipal_ForReplication_IsEncrypted_MethodName_Recompile".Contains(fromProperty.Name))
-                        continue;
-                }
-                else if (self.GetType() == typeof(View))
-                {
-                    if ("IsEncrypted_IsSchemaBound".Contains(fromProperty.Name))
+                    case Column _ when
+                        $"GraphType_ColumnEncryptionKeyID_ColumnEncryptionKeyName_EncryptionAlgorithm_EncryptionType_DistributionColumnName_IsDistributedColumn"
+                            .Contains(fromProperty.Name):
+                    case UserDefinedFunction _ when
+                        $"AssemblyName_ClassName_ExecutionContext_ExecutionContextPrincipal_FunctionType_IsEncrypted_IsSchemaBound_MethodName_TableVariableName"
+                            .Contains(fromProperty.Name):
+                    case StoredProcedure _ when
+                        $"AssemblyName_ClassName_ExecutionContext_ExecutionContextPrincipal_ForReplication_IsEncrypted_MethodName_Recompile"
+                            .Contains(fromProperty.Name):
+                    case View _ when $"IsEncrypted_IsSchemaBound".Contains(fromProperty.Name):
                         continue;
                 }
 
@@ -63,7 +52,7 @@ namespace Converter.Extension
                 try
                 {
                     toProperty = self.GetType().GetProperty(fromProperty.Name);
-                    toProperty.SetValue(self, fromProperty.GetValue(parent));
+                    toProperty?.SetValue(self, fromProperty.GetValue(parent));
                 }
                 catch (Exception ex)
                 {
@@ -73,7 +62,6 @@ namespace Converter.Extension
             }
 
             fromProperties = null;
-            toProperties = null;
             toProperty = null;
         }
 

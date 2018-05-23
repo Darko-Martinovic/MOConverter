@@ -2,32 +2,34 @@
 using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Linq;
-using System.Text.RegularExpressions;
+
 
 namespace Converter.Extension
 {
     public static class UserDefinedFunctionExtension
     {
+        internal static string FName(this UserDefinedFunction self) => "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
 
-        public static string FName(this UserDefinedFunction self)
-        {
-            return "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
-        }
-
-        public static bool SwitchToMo(this UserDefinedFunction self, Database InMemDatabase, Database Traditional, Configuration.Configuration cnf, ref string error, ILog logger)
+        public static bool SwitchToMo(
+                                     this UserDefinedFunction self, 
+                                     Database inMemDatabase, 
+                                     Database traditional, 
+                                     Configuration.Configuration cnf, 
+                                     ref string error, 
+                                     ILog logger)
         {
             bool retValue = false;
             if (self.IsSystemObject)
                 return true;
 
-            if (InMemDatabase.UserDefinedFunctions.Contains(self.Name, self.Schema))
+            if (inMemDatabase.UserDefinedFunctions.Contains(self.Name, self.Schema))
             {
                 logger.Log("\t" + "Already exists", self.FName());
                 return true;
             }
 
             logger.Log("UDF", self.FName());
-            UserDefinedFunction newsp = new UserDefinedFunction(InMemDatabase, self.Name, self.Schema);
+            UserDefinedFunction newsp = new UserDefinedFunction(inMemDatabase, self.Name, self.Schema);
             newsp.CopyPropertiesFrom(self);
             try
             {

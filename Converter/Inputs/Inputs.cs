@@ -3,13 +3,13 @@ namespace Converter.Inputs
 {
     public class Inputs
     {
-        public string serverName;
-        public string databaseName;
-        public string inMemoryDataBaseName;
-        public string userName;
-        public string password;
-        public bool isWindows;
-        public bool createNew;
+        public string ServerName;
+        public string DatabaseName;
+        public string InMemoryDataBaseName;
+        public string UserName;
+        public string Password;
+        public bool IsWindows;
+        public bool CreateNew;
 
     }
 }

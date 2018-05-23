@@ -264,7 +264,7 @@ namespace Converter.Extension
                     };
                     newColumn.Nullable = c.Nullable;
                     newColumn.Default = c.Default;
-                    logger.LogWarErr("Warning " + (isTable == true ? c.FName() : c.UDTName()),
+                    logger.LogWarErr("Warning " + (isTable == true ? c.FName() : c.UdtName()),
                                       $"Convertion datatype : {ud.Name}  to  {newColumn.DataType.SqlDataType.ToString()}");
                 }
                 catch (Exception ex)
@@ -289,7 +289,7 @@ namespace Converter.Extension
                 else
                     newColumn.DataType.MaximumLength = -1;
 
-                logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UDTName()),
+                logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UdtName()),
                     $"Convertion CLR datatype to {newColumn.DataType.SqlDataType.ToString()}");
             }
             // support for XML type
@@ -297,7 +297,7 @@ namespace Converter.Extension
             {
                 newColumn.DataType.SqlDataType = SqlDataType.NVarChar;
                 newColumn.DataType.MaximumLength = -1;
-                logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UDTName()),
+                logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UdtName()),
                                  $"Convertion XML datatype to  {newColumn.DataType.SqlDataType.ToString()}");
             }
             else if (c.DataType.SqlDataType == SqlDataType.Variant || c.DataType.SqlDataType == SqlDataType.Text ||
@@ -305,20 +305,20 @@ namespace Converter.Extension
             {
                 newColumn.DataType.SqlDataType = SqlDataType.NVarChar;
                 newColumn.DataType.MaximumLength = -1;
-                logger.LogWarErr("Warning " + (isTable  ? c.FName() : c.UDTName()),
+                logger.LogWarErr("Warning " + (isTable  ? c.FName() : c.UdtName()),
                                  "Convertion " + c.DataType.SqlDataType + " TO " + newColumn.DataType.SqlDataType);
             }
             else if (c.DataType.SqlDataType == SqlDataType.Image)
             {
                 newColumn.DataType.SqlDataType = SqlDataType.VarBinaryMax;
                 newColumn.DataType.MaximumLength = -1;
-                logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UDTName()),
+                logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UdtName()),
                                  "Convertion " + c.DataType.SqlDataType + " TO " + newColumn.DataType.SqlDataType);
             }
             else if (c.DataType.SqlDataType == SqlDataType.DateTimeOffset)
             {
                 newColumn.DataType.SqlDataType = SqlDataType.DateTime2;
-                logger.LogWarErr("Warning " + (isTable  ? c.FName() : c.UDTName()),
+                logger.LogWarErr("Warning " + (isTable  ? c.FName() : c.UdtName()),
                                  "Convertion " + c.DataType.SqlDataType + " TO " + newColumn.DataType.SqlDataType);
             }
             //else
@@ -331,7 +331,7 @@ namespace Converter.Extension
                 newColumn.Computed = false;
                 newColumn.ComputedText = String.Empty;
                 //newColumn.IsPersisted = c.IsPersisted;
-                logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UDTName()),
+                logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UdtName()),
                                  $"Can not apply computed column {c.ComputedText}");
             }
 
@@ -343,7 +343,7 @@ namespace Converter.Extension
                 hasIdentities = true;
                 // has to be 1
                 if (c.IdentityIncrement != 1 || c.IdentitySeed != 1)
-                    logger.LogWarErr("Warning " + (isTable ? newColumn.FName() : newColumn.UDTName()),
+                    logger.LogWarErr("Warning " + (isTable ? newColumn.FName() : newColumn.UdtName()),
                                     " setting identity seed and identity increment to 1 ");
                 newColumn.IdentityIncrement = 1;
                 newColumn.IdentitySeed = 1;

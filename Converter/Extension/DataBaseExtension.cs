@@ -1,8 +1,5 @@
 ﻿using Converter.Interface;
 using Microsoft.SqlServer.Management.Smo;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Converter.Extension
 {
@@ -28,9 +25,6 @@ namespace Converter.Extension
                                         Options.Options o,
                                         SQLServerMoFeatures enumFeatures)
         {
-            bool retvalue = false;
-
-
 
 
             logger.SetOverall("1/6");
@@ -39,7 +33,7 @@ namespace Converter.Extension
 
             logger.SetValue(logger.CurrentItem);
             logger.SetMaxValue(logger.Counter);
-            TableCollection tables = self.Tables;
+            var tables = self.Tables;
 
 
 
@@ -54,7 +48,7 @@ namespace Converter.Extension
                     logger.SetValue(logger.CurrentItem);
                     continue;
                 }
-                if (o.TableContains.Equals(string.Empty) == false && tbl.Name.Contains(o.TableContains) == false)
+                if (string.Empty.Equals(o.TableContains) == false && tbl.Name.Contains(o.TableContains) == false)
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);
@@ -66,10 +60,8 @@ namespace Converter.Extension
 
                 logger.SetValue(logger.CurrentItem);
                 string error = string.Empty;
-                if (tbl.SwitchToMo(dbInMemory, self, cnf, o, ref error, logger,enumFeatures) == false)
-                {
+                if (tbl.SwitchToMo(dbInMemory, self, cnf, o, ref error, logger, enumFeatures) == false)
                     logger.LogWarErr("TABLE:Error ", error);
-                }
                 //Thread.Sleep(50);
 
                 logger.CurrentItem++;
@@ -121,7 +113,7 @@ namespace Converter.Extension
             logger.SetValue(logger.CurrentItem);
             logger.SetMaxValue(logger.Counter);
 
-            UserDefinedTableTypeCollection udtts = self.UserDefinedTableTypes;
+            var udtts = self.UserDefinedTableTypes;
 
             foreach (UserDefinedTableType tbl in udtts)
             {
@@ -157,7 +149,7 @@ namespace Converter.Extension
             // user defined function 
 
             //IEnumerable<UserDefinedFunction> udfs = ConvertToGenericList<UserDefinedFunction>(self.UserDefinedFunctions).Where(a => a.IsSystemObject == false);
-            UserDefinedFunctionCollection udfs = self.UserDefinedFunctions;
+            var udfs = self.UserDefinedFunctions;
 
             logger.CurrentItem = 1;
             logger.Counter = udfs.Count;
@@ -186,9 +178,7 @@ namespace Converter.Extension
                 string error = string.Empty;
 
                 if (sp.SwitchToMo(dbInMemory, self, cnf, ref error, logger) == false)
-                {
                     logger.LogWarErr("UDF:Error", error);
-                }
                 logger.CurrentItem++;
 
             }
@@ -199,7 +189,7 @@ namespace Converter.Extension
             logger.SetOverall("5/6");
             //  STORED PROCEDURES
             //IEnumerable<StoredProcedure> sps = ConvertToGenericList<StoredProcedure>(self.StoredProcedures).Where(a => a.IsSystemObject == false);
-            StoredProcedureCollection sps = self.StoredProcedures;
+            var sps = self.StoredProcedures;
 
             logger.CurrentItem = 1;
             logger.Counter = sps.Count;
@@ -238,7 +228,7 @@ namespace Converter.Extension
 
 
             logger.SetOverall("6/6");
-            ViewCollection vs = self.Views;
+            var vs = self.Views;
             // VIEWS
 
             //IEnumerable<View> vs = ConvertToGenericList<View>(self.Views).Where(a => a.IsSystemObject == false);
@@ -252,7 +242,7 @@ namespace Converter.Extension
 
             
             
-            foreach (Microsoft.SqlServer.Management.Smo.View sp in vs)
+            foreach (View sp in vs)
             {
                 if (sp.IsSystemObject)
                 {
@@ -279,7 +269,7 @@ namespace Converter.Extension
             }
             logger.SetOverall(string.Empty);
             logger.Log(string.Empty, string.Empty);
-            retvalue = true;
+            
 
             tables = null;
             udtts = null;
@@ -287,7 +277,7 @@ namespace Converter.Extension
             udfs = null;
             sps = null;
 
-            return retvalue;
+            return true;
         }
 
     }
