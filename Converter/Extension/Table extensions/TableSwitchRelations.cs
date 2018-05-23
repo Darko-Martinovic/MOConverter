@@ -2,6 +2,7 @@
 using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 
 namespace Converter.Extension
 {
@@ -19,7 +20,7 @@ namespace Converter.Extension
                                                 ILog logger
                                                 )
         {
-            bool retValue = false;
+
             foreach (ForeignKey fk in self.ForeignKeys)
             {
                 if (inMemDatabase.Tables[self.Name, self.Schema].ForeignKeys.Contains(fk.Name))
@@ -50,21 +51,22 @@ namespace Converter.Extension
                 try
                 {
                     newFk.Create();
-                    retValue = true;
+                    return true;
                 }
                 catch (Exception ex)
                 {
                     error = String.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                                        .Select(ex1 => ex1.Message));
-                    logger.LogWarErr("Ralation Error", description: newFk.Name + " " + error);
+                    logger.LogWarErr("Ralation Error", newFk.Name + " " + error);
+                    return false;
                 }
 
-
             }
-           
-            return retValue;
+
+            return true;
 
         }
+        
 
     }
 }
