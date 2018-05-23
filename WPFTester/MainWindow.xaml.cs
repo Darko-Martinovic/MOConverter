@@ -14,6 +14,7 @@ using System.Diagnostics;
 using Converter.Extension;
 using Converter.Inputs;
 using Converter.DataAccess;
+using Converter.Utility;
 
 namespace WPFTester
 {
@@ -38,10 +39,10 @@ namespace WPFTester
             cmbDestination.IsEnabled = false;
             chkNewDatabase.IsChecked = true;
             //load the configuration
-            cnf = new Converter.Configuration.Configuration();
-            cnf.LoadConfig();
+            _cnf = new Converter.Configuration.Configuration();
+            _cnf.LoadConfig();
             txtServer.Focus();
-            isLoaded = true;
+            _isLoaded = true;
         }
 
 
@@ -50,8 +51,8 @@ namespace WPFTester
             if (txtServer.Text.Equals(string.Empty))
             {
                 txtServer.Focus();
-                MessageBox.Show("Please enter the valid server name",
-                                 "Error",
+                MessageBox.Show(@"Please enter the valid server name",
+                                 @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
                 return;
@@ -59,8 +60,8 @@ namespace WPFTester
             if (cmbAuth.SelectedIndex == -1)
             {
                 cmbAuth.Focus();
-                MessageBox.Show("Please choose authentication type!",
-                                "Error",
+                MessageBox.Show(@"Please choose authentication type!",
+                                @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
                 return;
@@ -68,16 +69,16 @@ namespace WPFTester
             if (cmbDatabase.SelectedIndex == -1)
             {
                 cmbDatabase.Focus();
-                MessageBox.Show("Please choose database",
-                                "Error",
+                MessageBox.Show(@"Please choose database",
+                                @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
                 return;
             }
             if (chkNewDatabase.IsChecked == false && cmbDatabase.Text.Equals(cmbDestination.Text))
             {
-                MessageBox.Show("Source and destination are the same. Not allowed!",
-                                "Error",
+                MessageBox.Show(@"Source and destination are the same. Not allowed!",
+                                @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
                 return;
@@ -85,77 +86,86 @@ namespace WPFTester
             }
 
             //Create inputs
-            i = new Inputs();
-            i.ServerName = txtServer.Text;
-            i.DatabaseName = cmbDatabase.Text;
-            i.InMemoryDataBaseName = cmbDestination.Text;
-            i.UserName = txtUserName.Text;
-            i.Password = txtPassword.Password;
-            i.IsWindows = cmbAuth.SelectedIndex == 0 ? true : false;
-            i.CreateNew = chkNewDatabase.IsChecked == true;
-            if (i.CreateNew)
-                i.InMemoryDataBaseName = i.DatabaseName + "_InMem";
+            _i = new Inputs
+            {
+                ServerName = txtServer.Text,
+                DatabaseName = cmbDatabase.Text,
+                InMemoryDataBaseName = cmbDestination.Text,
+                UserName = txtUserName.Text,
+                Password = txtPassword.Password,
+                IsWindows = cmbAuth.SelectedIndex == 0,
+                CreateNew = chkNewDatabase.IsChecked == true
+            };
+            if (_i.CreateNew)
+                _i.InMemoryDataBaseName = _i.DatabaseName + "_InMem";
             //create options
-            o = new Options();
-            o.CopyData = chkCopyData.IsChecked == true;
+            _o = new Options
+            {
+                CopyData = chkCopyData.IsChecked == true,
+                TableContains = txtTable.Text.Trim(),
+                SchemaContains = txtSchema.Text.Trim()
+            };
 
 
-            if (cmbIndexOptions.SelectedIndex == 0)
-                o.UseHashIndexes = Options.IndexDecision.Hash;
-            else if (cmbIndexOptions.SelectedIndex == 1)
-                o.UseHashIndexes = Options.IndexDecision.Range;
-            else
-                o.UseHashIndexes = Options.IndexDecision.ExtendedPropery;
+            switch (cmbIndexOptions.SelectedIndex)
+            {
+                case 0:
+                    _o.UseHashIndexes = Options.IndexDecision.Hash;
+                    break;
+                case 1:
+                    _o.UseHashIndexes = Options.IndexDecision.Range;
+                    break;
+                default:
+                    _o.UseHashIndexes = Options.IndexDecision.ExtendedPropery;
+                    break;
+            }
 
-            //o.DropOnDestination = chkDropOnDestination.Checked;
-            o.SchemaContains = txtSchema.Text.Trim();
-            o.TableContains = txtTable.Text.Trim();
+            //_o.DropOnDestination = chkDropOnDestination.Checked;
 
-            Server server = null;
+            Server server;
             try
             {
-                ServerConnection cnn = new ServerConnection(i.ServerName);
+                ServerConnection cnn = new ServerConnection(_i.ServerName);
                 cnn.Connect();
                 server = new Server(cnn);
 
             }
             catch (Exception ex)
             {
-                MessageBox.Show("I'm unable to connect to the server " + "" + i.ServerName + "" + "\r\n" + ex.Message,
-                                "Error",
-                                 MessageBoxButton.OK,
-                                 MessageBoxImage.Error);
-                return;
-            }
-            bool isSysAdmin = ((int)DataAccess.ExecuteScalar(DataAccess.GetConnectionString(
-                    txtServer.Text,
-                    "master",
-                    cmbAuth.SelectedIndex == 0 ? true : false,
-                    txtUserName.Text, txtPassword.Password), " SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1) ? true : false;
-
-            if (isSysAdmin == false)
-            {
-                MessageBox.Show("You should connect as a member of sysadmin fixed server role",
-                                "Error",
+                MessageBox.Show($@"I'm unable to connect to the server {_i.ServerName}\r\n{ex.Message}",
+                                @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
                 return;
             }
 
-
-
-            if (new Version(server.VersionString) < new Version(C_SERVER_VERSION))
+            if ((((int)DataAccess.ExecuteScalar(DataAccess.GetConnectionString(
+                      txtServer.Text,
+                      "master",
+                      cmbAuth.SelectedIndex == 0,
+                      txtUserName.Text, txtPassword.Password), " SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1)) == false)
             {
-                MessageBox.Show("The server has to be SQL2016 SP2 or higher",
-                                "Error",
+                MessageBox.Show(@"You should connect as a member of sysadmin fixed server role",
+                                @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
                 return;
             }
-            if (server.Databases[i.DatabaseName] == null)
+
+
+
+            if (new Version(server.VersionString) < new Version(CServerVersion))
             {
-                MessageBox.Show("Choose the database!",
-                                "Error",
+                MessageBox.Show(@"The server has to be SQL2016 SP2 or higher",
+                                @"Error",
+                                 MessageBoxButton.OK,
+                                 MessageBoxImage.Error);
+                return;
+            }
+            if (server.Databases[_i.DatabaseName] == null)
+            {
+                MessageBox.Show(@"Choose the database!",
+                                @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
                 cmbDatabase.SelectedItem = null;
@@ -163,30 +173,30 @@ namespace WPFTester
 
             }
 
-            if (server.Databases[i.DatabaseName].HasMemoryOptimizedObjects)
+            if (server.Databases[_i.DatabaseName].HasMemoryOptimizedObjects)
             {
-                MessageBox.Show("The source database contains Memory Optimized FileGroup. It is not allowed!",
-                                "Error",
+                MessageBox.Show(@"The source database contains Memory Optimized FileGroup. It is not allowed!",
+                                @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
                 return;
             }
-            string error = "";
+            var error = "";
 
 
-            if (i.CreateNew)
+            if (_i.CreateNew)
             {
-                if (MessageBox.Show("You choose to create a new database \"" + i.DatabaseName + "_InMem." + "\"\r\n" + " Are you sure?",
-                                    "Question",
+                if (MessageBox.Show($"You choose to create a new database {_i.DatabaseName}_InMem\\r\n Are you sure?",
+                                    @"Question",
                                     MessageBoxButton.YesNo,
                                     MessageBoxImage.Question) == MessageBoxResult.No)
                 {
                     return;
                 }
-                if (Converter.Utility.CreateDatabase.Create(server, i.DatabaseName + "_InMem", ref error, cnf.FileGroupName, cnf.FileName, cnf.MoPath) == false)
+                if (CreateDatabase.Create(server, _i.DatabaseName + "_InMem", ref error, _cnf.FileGroupName, _cnf.FileName, _cnf.MoPath) == false)
                 {
-                    MessageBox.Show("An error occurs while creating the database!" + Environment.NewLine + error,
-                                    "Error",
+                    MessageBox.Show(@"An error occurs while creating the database!" + Environment.NewLine + error,
+                                    @"Error",
                                     MessageBoxButton.OK,
                                     MessageBoxImage.Error);
                     return;
@@ -194,17 +204,17 @@ namespace WPFTester
             }
             else
             {
-                if (MessageBox.Show("You choose to convert the database \"" + i.DatabaseName.ToUpper() + "\"" + " to In-Mem \"" + i.InMemoryDataBaseName.ToUpper() + "\"\r\n" + "Are you sure?",
-                                    "Question",
+                if (MessageBox.Show($"You choose to convert the database {_i.DatabaseName.ToUpper()} to In-Mem {_i.InMemoryDataBaseName.ToUpper()}\\r\nAre you sure?",
+                                    @"Question",
                                     MessageBoxButton.YesNo,
                                     MessageBoxImage.Question) == MessageBoxResult.No)
                 {
                     return;
                 }
-                if (Converter.Utility.CreateDatabase.Create(server, i.InMemoryDataBaseName, ref error, cnf.FileGroupName, cnf.FileName, cnf.MoPath) == false)
+                if (CreateDatabase.Create(server, _i.InMemoryDataBaseName, ref error, _cnf.FileGroupName, _cnf.FileName, _cnf.MoPath) == false)
                 {
-                    MessageBox.Show("An error occurs while creating the database!",
-                                    "Error",
+                    MessageBox.Show(@"An error occurs while creating the database!",
+                                    @"Error",
                                     MessageBoxButton.OK,
                                     MessageBoxImage.Error);
                     return;
@@ -216,7 +226,7 @@ namespace WPFTester
 
             ProgressBar1.Visibility = Visibility.Visible;
             ProgressBar1.Minimum = 1;
-            ProgressBar1.Maximum = server.Databases[i.DatabaseName].Tables.Count;
+            ProgressBar1.Maximum = server.Databases[_i.DatabaseName].Tables.Count;
 
             SetupRows(false);
             btnConvertToMO.IsEnabled = false;
@@ -224,16 +234,16 @@ namespace WPFTester
 
 
 
-            t1 = DateTime.Now;
+            _t1 = DateTime.Now;
 
-            mainObr = new Thread(StartConversion);
-            mainObr.Start();
+            _mainObr = new Thread(StartConversion);
+            _mainObr.Start();
 
 
-            dispatcherTimer = new DispatcherTimer();
-            dispatcherTimer.Tick += new EventHandler(dispatcherTimer_Tick);
-            dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
-            dispatcherTimer.Start();
+            _dispatcherTimer = new DispatcherTimer();
+            _dispatcherTimer.Tick += new EventHandler(dispatcherTimer_Tick);
+            _dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
+            _dispatcherTimer.Start();
 
             
 
@@ -242,33 +252,33 @@ namespace WPFTester
 
 
         #region " Fields & constants "
-        private bool isError = false;
+        private bool _isError;
         //private Task t = null;
         //private CancellationTokenSource ts = null;
 
 
-        private bool isLoaded = false;
-        private Inputs i = null;
-        private Options o = null;
-        DispatcherTimer dispatcherTimer = null;
-        private Thread mainObr = null;
+        private bool _isLoaded;
+        private Inputs _i ;
+        private Options _o ;
+        DispatcherTimer _dispatcherTimer;
+        private Thread _mainObr;
 
         //
         // https://support.microsoft.com/en-us/help/3177312/sql-server-2016-build-versions
         // SQL Server 2016 SP2 
-        private const string C_SERVER_VERSION = "13.0.5026.0";
+        private const string CServerVersion = "13.0.5026.0";
 
 
         //
         // New features available with SQL Server 2017
         // 
-        private const string C_NEW_FEATURES_VERSION = "14.0.1000.169";
+        private const string CNewFeaturesVersion = "14.0.1000.169";
 
 
-        private Converter.Configuration.Configuration cnf = null;
-        private DateTime t1;
-        private DateTime t2;
-        private bool success = false;
+        private Converter.Configuration.Configuration _cnf;
+        private DateTime _t1;
+        private DateTime _t2;
+        private bool _success;
         #endregion
 
         #region " Start the conversion "
@@ -279,28 +289,28 @@ namespace WPFTester
         private void StartConversion()
         {
 
-            ServerConnection cnn = new ServerConnection(i.ServerName);
+            ServerConnection cnn = new ServerConnection(_i.ServerName);
             cnn.Connect();
             Server server = new Server(cnn);
 
-            Database db = server.Databases[i.DatabaseName];
+            Database db = server.Databases[_i.DatabaseName];
             // Connect to the In-Memory Database
-            ServerConnection cnnInMem = new ServerConnection(i.ServerName);
+            ServerConnection cnnInMem = new ServerConnection(_i.ServerName);
             cnnInMem.Connect();
             Server serverInMem = new Server(cnnInMem);
-            Database dbInMemory = serverInMem.Databases[i.InMemoryDataBaseName];
+            Database dbInMemory = serverInMem.Databases[_i.InMemoryDataBaseName];
 
             // new features available starting with SQL Server 2017
             SQLServerMoFeatures enumFeatures = SQLServerMoFeatures.SQLServer2016;
-            if (new Version(server.VersionString) >= new Version(C_NEW_FEATURES_VERSION))
+            if (new Version(server.VersionString) >= new Version(CNewFeaturesVersion))
             {
                 enumFeatures = SQLServerMoFeatures.SQLServer2017;
             }
-            success = db.SwitchToMo(
+            _success = db.SwitchToMo(
                                     dbInMemory,
                                     (ILog)this,
-                                    cnf,
-                                    o,
+                                    _cnf,
+                                    _o,
                                     enumFeatures);
 
 
@@ -322,8 +332,7 @@ namespace WPFTester
 
         #region " Callback "
 
-
-        public void SetTextCode(string text)
+        private void SetTextCode(string text)
         {
             if (Dispatcher.CheckAccess())
             {
@@ -339,7 +348,8 @@ namespace WPFTester
 
             }
         }
-        public void SetTextDescription(string text)
+
+        private void SetTextDescription(string text)
         {
             if (Dispatcher.CheckAccess())
             {
@@ -356,7 +366,7 @@ namespace WPFTester
         }
 
 
-        public void SetLabelText(string text)
+        private void SetLabelText(string text)
         {
             if (Dispatcher.CheckAccess())
             {
@@ -373,7 +383,7 @@ namespace WPFTester
             }
         }
 
-        void SetProgresBarValue(int text)
+        private void SetProgresBarValue(int text)
         {
             if (Dispatcher.CheckAccess())
             {
@@ -396,7 +406,7 @@ namespace WPFTester
             }
         }
 
-        void SetProgressBarMaxValue(int text)
+        private void SetProgressBarMaxValue(int text)
         {
             if (Dispatcher.CheckAccess())
             {
@@ -436,91 +446,77 @@ namespace WPFTester
 
 
 
-        void ILog.Log(string text, string txtDescription)
+        void ILog.Log(string text, string txt)
         {
 
             SetTextCode(text);
-            SetTextDescription(txtDescription);
+            SetTextDescription(txt);
 
         }
-        private StringBuilder sb = null;
-        void ILog.LogWarErr(string text, string txtDescription)
+        private StringBuilder _sb;
+        void ILog.LogWarErr(string text, string txt)
         {
-            if (sb == null)
+            if (_sb == null)
             {
-                sb = new StringBuilder();
-                sb.Append("****Summary report - converting  " + i.DatabaseName + " to IN-MEM OLTP " + i.InMemoryDataBaseName + " on server " + i.ServerName + "\r\n");
-                sb.Append("\r\n");
-                sb.Append("****List of warnings and errors");
-                sb.Append("\r\n");
-                sb.Append("\r\n");
+                _sb = new StringBuilder();
+                _sb.Append($"****Summary report - converting  {_i.DatabaseName}  to IN-MEM OLTP {_i.InMemoryDataBaseName}  on server {_i.ServerName} ");
+                _sb.Append("\r\n");
+                _sb.Append("****List of warnings and errors");
+                _sb.Append("\r\n");
+                _sb.Append("\r\n");
             }
 
 
-            sb.Append(text + " " + txtDescription + "\r\n");
-            sb.Append(Environment.NewLine);
+            _sb.Append($"{text} {txt}\r\n");
+            _sb.Append(Environment.NewLine);
         }
 
-        int mCurrentItem;
-        int ILog.CurrentItem
-        {
-            get
-            {
-                return mCurrentItem;
-            }
-            set
-            {
-                mCurrentItem = value;
-            }
-        }
-        int mCounter;
-        int ILog.Counter
-        {
-            get
-            {
-                return mCounter;
-            }
-            set
-            {
-                mCounter = value;
-            }
-        }
+        int ILog.CurrentItem { get; set; }
+
+        int ILog.Counter { get; set; }
+
+
 
         #endregion
 
         #region " Cancel the conversation process "
-        private bool isAborted = false;
+
+        private bool _isAborted;
         private void btnCancel_Click_1(object sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show("You choose to stop conversation process.\r\n Are you sure?", "Question", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.No)
+            if (MessageBox.Show(@"You choose to stop conversation process.\r\n Are you sure?",
+                                @"Question",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Question) == MessageBoxResult.No)
             {
                 return;
             }
 
-            if (mainObr != null)
+            if (_mainObr != null)
             {
                 try
                 {
-                    mainObr.Abort();
-                    while (mainObr.ThreadState != System.Threading.ThreadState.Aborted)
+                    _mainObr.Abort();
+                    while (_mainObr.ThreadState != System.Threading.ThreadState.Aborted)
                     {
-                        mainObr.Abort();
+                        _mainObr.Abort();
                     }
 
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-
+                    if (Debugger.IsAttached)
+                        Debugger.Break();
                 }
             }
-            isAborted = true;
+            _isAborted = true;
             SetupRows(true);
             btnCancel.IsEnabled = false;
             btnConvertToMO.IsEnabled = true;
             lblOveral.Text = string.Empty;
             txtCode.Text = string.Empty;
             txtDescription.Text = string.Empty;
-            sb = null;
+            _sb = null;
             
 
         }
@@ -533,48 +529,53 @@ namespace WPFTester
         #region " The timer controls the working thread "
         private void dispatcherTimer_Tick(object sender, EventArgs e)
         {
-            if (mainObr == null || mainObr.IsAlive)
+            if (_mainObr == null || _mainObr.IsAlive)
             {
                 return;
             }
             try
             {
-                dispatcherTimer.IsEnabled = false;
-                mainObr.Join();
-                mainObr = null;
+                _dispatcherTimer.IsEnabled = false;
+                _mainObr.Join();
+                _mainObr = null;
 
             }
             catch (Exception ex)
             {
+                if(Debugger.IsAttached)
+                    Debugger.Break();
             }
-            t2 = DateTime.Now;
+            _t2 = DateTime.Now;
 
             ProgressBar1.Visibility = Visibility.Hidden;
-            if (success)
+            if (_success)
             {
-                TimeSpan ts = t2 - t1;
-                MessageBox.Show("Switching to in-memory OLTP finished successfully. Elapsed time " + ts.ToString(@"dd\.hh\:mm\:ss"), "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                TimeSpan ts = _t2 - _t1;
+                MessageBox.Show($"Switching to in-memory OLTP finished successfully. Elapsed time {ts:dd.hh:mm:ss}", 
+                                @"Info", 
+                                MessageBoxButton.OK, 
+                               MessageBoxImage.Information);
             }
 
-            if (isAborted == false)
+            if (_isAborted == false)
             {
-                string fileName = i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
+                string fileName = _i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
                 if (File.Exists(fileName))
                     File.Delete(fileName);
-                File.WriteAllText(fileName, sb.ToString());
+                File.WriteAllText(fileName, _sb.ToString());
                 // start notepad and disply the configuration
                 Process.Start(fileName);
             }
             else
             {
-                isAborted = false;
+                _isAborted = false;
             }
 
-            cnf.LoadConfig();
+            _cnf.LoadConfig();
             SetupRows(true);
             btnCancel.IsEnabled = false;
             btnConvertToMO.IsEnabled = true;
-            sb = null;
+            _sb = null;
 
         }
         #endregion
@@ -586,44 +587,50 @@ namespace WPFTester
             if (txtServer.Text.Trim().Equals(string.Empty))
             {
                 txtServer.Focus();
-                MessageBox.Show("Please enter the valid server name",
-                                 "Error",
-                                 MessageBoxButton.OK,
-                                 MessageBoxImage.Error);
+                MessageBox.Show(@"Please enter the valid server name",
+                                @"Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
                 return;
 
             }
-            if (cmbAuth.SelectedIndex != 0 && (txtUserName.Text.Trim().Equals(string.Empty) || txtPassword.Password.Trim().Equals(string.Empty)))
+            string text = txtUserName.Text;
+            if (cmbAuth.SelectedIndex != 0 && (text.Trim().Equals(string.Empty) || txtPassword.Password.Trim().Equals(string.Empty)))
             {
 
-                MessageBox.Show("Please enter userName and password", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                if (isError)
-                    isError = false;
+                MessageBox.Show(@"Please enter userName and password", 
+                                @"Error", 
+                                MessageBoxButton.OK, 
+                                MessageBoxImage.Error);
+                if (_isError)
+                    _isError = false;
                 return;
             }
-            if (isError == false)
+            if (_isError == false)
             {
                 BindDataBases(cmbDatabase);
             }
         }
         private void BindDataBases(ComboBox cmb)
         {
-            string error = "";
             cmb.Items.Clear();
             DataSet ds = DataAccess.GetDataSet(
                 DataAccess.GetConnectionString(
                     txtServer.Text,
                     "master",
-                    cmbAuth.SelectedIndex == 0 ? true : false,
-                    txtUserName.Text, txtPassword.Password), @"SELECT name 
+                    cmbAuth.SelectedIndex == 0,
+                    userName: txtUserName.Text, password: txtPassword.Password), @"SELECT name 
                                                                 FROM sys.databases
                                                                 WHERE state = 0 
                                                                     AND is_read_only = 0 
-                                                                ORDER BY name", null, out error);
-            if (error.Equals(string.Empty) == false)
+                                                                ORDER BY name", null, out var error);
+            if (string.Empty.Equals(error) == false)
             {
-                isError = true;
-                MessageBox.Show("Error binding database information : " + error, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _isError = true;
+                MessageBox.Show($"Error binding database information : {error}", 
+                                @"Error", 
+                                MessageBoxButton.OK, 
+                                MessageBoxImage.Error);
                 ds = null;
             }
             else
@@ -639,7 +646,7 @@ namespace WPFTester
 
         private void chkNewDatabase_Checked(object sender, EventArgs e)
         {
-            if (isLoaded == false)
+            if (_isLoaded == false)
                 return;
             if (chkNewDatabase.IsChecked == true)
             {
@@ -659,7 +666,7 @@ namespace WPFTester
 
         private void chkNewDatabase_Unchecked_1(object sender, EventArgs e)
         {
-            if (isLoaded == false)
+            if (_isLoaded == false)
                 return;
 
             if (cmbDestination != null)
@@ -672,15 +679,15 @@ namespace WPFTester
 
         private void Destination_DropDownOpened(object sender, System.EventArgs e)
         {
-            if (isLoaded == false)
+            if (_isLoaded == false)
                 return;
             if (cmbDestination.IsEnabled == false)
                 return;
             if (txtServer.Text.Trim().Equals(string.Empty))
             {
                 txtServer.Focus();
-                MessageBox.Show("Please enter the valid server name",
-                                 "Error",
+                MessageBox.Show(@"Please enter the valid server name",
+                                @"Error",
                                  MessageBoxButton.OK,
                                  MessageBoxImage.Error);
                 return;
@@ -693,12 +700,12 @@ namespace WPFTester
 
         private void cmbAuth_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (isLoaded == false)
+            if (_isLoaded == false)
                 return;
             if (cmbAuth.SelectedItem != null)
             {
-                if (isError)
-                    isError = false;
+                if (_isError)
+                    _isError = false;
 
                 if (cmbAuth.SelectedIndex == 0)
                 {
