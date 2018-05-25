@@ -1,5 +1,4 @@
-The largest database I ported to In-Memory OLTP by using this tool, was 15 GB in size and contains 1200 tables, 2200 indexes, and 2600 relations. The largest table was 600 MB in size. After converting, the table size was twice smaller.
-The process of converting the whole database took 3 hours.
+The largest database I ported to In-Memory OLTP by using this tool, was 15 GB in size and contains 1200 tables, 2200 indexes, and 2600 relations. The largest table was 4 GB in size. The process of converting the whole database took 3 hours.
 
 ## :white_check_mark: To convert your database to In-Memory OLTP execute following code
 
