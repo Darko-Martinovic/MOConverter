@@ -29,7 +29,7 @@ namespace Converter.Extension
 
             var hasIdentities = false;
 
-            UserDefinedTableType newTable = new UserDefinedTableType(inMemDatabase, self.Name, self.Schema);
+            var newTable = new UserDefinedTableType(inMemDatabase, self.Name, self.Schema);
 
             foreach (Column c in self.Columns)
             {
@@ -48,7 +48,7 @@ namespace Converter.Extension
             {
                 if (i.IndexKeyType != IndexKeyType.DriPrimaryKey) continue;
 
-                Index idx = new Index(newTable, i.Name)
+                var idx = new Index(newTable, i.Name)
                 {
                     IndexType = IndexType.NonClusteredIndex,
                     IndexKeyType = IndexKeyType.DriPrimaryKey
@@ -63,7 +63,7 @@ namespace Converter.Extension
             newTable.IsMemoryOptimized = true;
             if (hasPrimaryKey == false)
             {
-                Column pkColumn =
+                var pkColumn =
                     new Column(newTable, "pk" + newTable.Name)
                     {
                         DataType = {SqlDataType = SqlDataType.Int},

@@ -40,7 +40,7 @@ namespace Converter.Configuration
                 if ((objectProperty.GetCustomAttributes(typeof(StSetupFromConfig), true).Length <= 0)) continue;
                 try
                 {
-                    string a = objectProperty.Name.ToUpper();
+                    var a = objectProperty.Name.ToUpper();
                     objectProperty.SetValue(this,
                         Convert.ChangeType(ConfigurationManager.AppSettings[a], objectProperty.PropertyType),
                         Public, null, null, null);
@@ -64,6 +64,6 @@ namespace Converter.Configuration
     {
         public StSetupFromConfig(bool wValueFromConfig) => ValueFromConfig = wValueFromConfig;
 
-        public bool ValueFromConfig { get; set; } = false;
+        public bool ValueFromConfig { get; set; }
     }
 }

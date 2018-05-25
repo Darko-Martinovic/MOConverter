@@ -17,36 +17,33 @@ namespace Converter.Extension
         public static string SelectStm(this Table self)
         {
             var buildInto = new StringBuilder();
-            int counter1 = 1;
+            var counter1 = 1;
             foreach (Column c in self.Columns)
             {
-                if (c.DataType.SqlDataType == Xml)
+                switch (c.DataType.SqlDataType)
                 {
-                    buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(max) ) " + c.Name);
-                }
-                else if (c.DataType.SqlDataType == HierarchyId || c.DataType.SqlDataType == Geography ||
-                         c.DataType.SqlDataType == Geometry)
-                {
-                    buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(1000) ) " + c.Name);
-                }
-                else if (c.DataType.SqlDataType == Variant || c.DataType.SqlDataType == Text ||
-                         c.DataType.SqlDataType == NText)
-                {
-                    buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(max) ) " + c.Name);
-                }
-                else if (c.DataType.SqlDataType == Image)
-                {
-                    buildInto.Append("CAST(" + c.QName() + " AS VARBINARY(max) ) " + c.Name);
-
-                }
-                else if (c.DataType.SqlDataType == SqlDataType.DateTimeOffset)
-                {
-                    buildInto.Append("CAST(" + c.QName() + " AS DATETIME2 ) " + c.Name);
-
-                }
-                else
-                {
-                    buildInto.Append(c.QName());
+                    case Xml:
+                        buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(max) ) " + c.Name);
+                        break;
+                    case HierarchyId:
+                    case Geography:
+                    case Geometry:
+                        buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(1000) ) " + c.Name);
+                        break;
+                    case Variant:
+                    case Text:
+                    case NText:
+                        buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(max) ) " + c.Name);
+                        break;
+                    case Image:
+                        buildInto.Append("CAST(" + c.QName() + " AS VARBINARY(max) ) " + c.Name);
+                        break;
+                    case SqlDataType.DateTimeOffset:
+                        buildInto.Append("CAST(" + c.QName() + " AS DATETIME2 ) " + c.Name);
+                        break;
+                    default:
+                        buildInto.Append(c.QName());
+                        break;
                 }
 
                 if (counter1 < self.Columns.Count)
@@ -98,7 +95,7 @@ namespace Converter.Extension
             if (hasIdentites)
                 sb.Append(self.IdentityInsStm(false)); //only one table per session has this value to ON
 
-            string retValue = sb.ToString();
+            var retValue = sb.ToString();
             sb = null;
             return retValue;
         }
@@ -107,7 +104,7 @@ namespace Converter.Extension
         {
             var sb = new StringBuilder();
             sb.Append($@" SELECT {self.SelectStm()} INTO {baseName}.{fullName} FROM {self.FName()}");
-            string retValue = sb.ToString();
+            var retValue = sb.ToString();
             sb = null;
             return retValue;
         }

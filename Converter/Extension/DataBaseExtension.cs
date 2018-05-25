@@ -94,7 +94,7 @@ namespace Converter.Extension
                     continue;
                 }
                 logger.SetValue(logger.CurrentItem);
-                string error = string.Empty;
+                var error = string.Empty;
                 if (tbl.SwitchRelationsToMo(dbInMemory, self, cnf, ref error, logger) == false)
                 {
                     logger.LogWarErr("RELATION:Error", error);
@@ -132,7 +132,7 @@ namespace Converter.Extension
                     continue;
                 }
                 logger.SetValue(logger.CurrentItem);
-                string error = string.Empty;
+                var error = string.Empty;
                 if (tbl.SwitchToMo(dbInMemory, self, cnf, ref error, logger) == false)
                 {
                     logger.LogWarErr("UDT:Error", error);

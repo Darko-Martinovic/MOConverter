@@ -67,13 +67,13 @@ namespace Converter.Extension
 
 
             //Add indexes
-            bool hasPrimaryKey = false;
+            var hasPrimaryKey = false;
             foreach (Index i in self.Indexes)
             {
                 if (i.IndexKeyType == IndexKeyType.DriPrimaryKey)
                 {
                     hasPrimaryKey = true;
-                    Index idx = new Index(newTable, i.Name);
+                    var idx = new Index(newTable, i.Name);
                     if (o.UseHashIndexes == IndexDecision.Hash)
                     {
                         idx.IndexType = IndexType.NonClusteredHashIndex;
@@ -170,7 +170,7 @@ namespace Converter.Extension
             // Add checks
             foreach (Check ch in self.Checks)
             {
-                Check newch = new Check(newTable, ch.Name);
+                var newch = new Check(newTable, ch.Name);
                 newch.CopyPropertiesFrom(ch);
                 if (newch.Text.ToLower().Contains("upper") || newch.Text.ToLower().Contains("like") ||
                     newch.Text.ToLower().Contains("charindex"))
@@ -196,7 +196,7 @@ namespace Converter.Extension
             catch (Exception ex)
             {
                
-                error = string.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
+                error = string.Join($"{Environment.NewLine}\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                     .Select(ex1 => ex1.Message));
 
                 if (Debugger.IsAttached)
@@ -218,7 +218,7 @@ namespace Converter.Extension
                     //Insert into 
                     traditional.ExecuteNonQuery(self.InsertIntoStm(inMemDatabase.Name, cnf.FullName));
                     //Insert statement
-                    Table test = inMemDatabase.Tables[cnf.HelperTableName, cnf.HelperSchema];
+                    var test = inMemDatabase.Tables[cnf.HelperTableName, cnf.HelperSchema];
                     inMemDatabase.ExecuteNonQuery(newTable.FullInsertStm(test.SelectStm(), hasIdentities, cnf.FullName));
                     retValue = true;
                     logger.Log("OK ", newTable.FName());
@@ -232,7 +232,7 @@ namespace Converter.Extension
                     logger.Log("Error", self.FName());
                 
 
-                    error = string.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
+                    error = string.Join($"{Environment.NewLine}\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                         .Select(ex1 => ex1.Message));
 
                     if (Debugger.IsAttached)
@@ -249,11 +249,19 @@ namespace Converter.Extension
             return retValue;
         }
 
-        public static void SupportUnsupported(Column newColumn, Column c, Database traditional, ILog logger, ref string error, ref bool hasIdentities, bool isTable)
+        public static void SupportUnsupported(
+                                      Column newColumn, 
+                                      Column c, 
+                                      Database traditional, 
+                                      ILog logger, 
+                                      ref string error, 
+                                      ref bool hasIdentities, 
+                                      bool isTable
+            )
         {
             if (c.DataType.SqlDataType == SqlDataType.UserDefinedDataType)
             {
-                UserDefinedDataType ud = traditional.UserDefinedDataTypes[c.DataType.Name, c.DataType.Schema];
+                var ud = traditional.UserDefinedDataTypes[c.DataType.Name, c.DataType.Schema];
                 try
                 {
                     newColumn.DataType = new DataType
@@ -265,7 +273,7 @@ namespace Converter.Extension
                     };
                     newColumn.Nullable = c.Nullable;
                     newColumn.Default = c.Default;
-                    logger.LogWarErr("Warning " + (isTable == true ? c.FName() : c.UdtName()),
+                    logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UdtName()),
                                       $"Convertion datatype : {ud.Name}  to  {newColumn.DataType.SqlDataType.ToString()}");
                 }
                 catch (Exception ex)
@@ -274,7 +282,7 @@ namespace Converter.Extension
                     //    Debugger.Break();
 
 
-                    error = string.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
+                    error = string.Join($"{Environment.NewLine}\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                         .Select(ex1 => ex1.Message));
                     logger.LogWarErr("COLUMN:Error", error);
                     return;

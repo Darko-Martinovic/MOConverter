@@ -76,7 +76,7 @@ namespace Converter.Utility
                 if (db.FileGroups.Contains(fileGroupName) == false)
                 {
                     // private const string C_FILE_GROUP = "mofg";
-                    FileGroup mo = new FileGroup(db, fileGroupName, FileGroupType.MemoryOptimizedDataFileGroup);
+                    var mo = new FileGroup(db, fileGroupName, FileGroupType.MemoryOptimizedDataFileGroup);
                     db.FileGroups.Add(mo);
                     try
                     {
@@ -95,7 +95,7 @@ namespace Converter.Utility
                 if (db.FileGroups[fileGroupName].Files.Contains(fileName) == false)
                 {
                     // Create the file ( the container ) 
-                    DataFile df = new DataFile(db.FileGroups[fileGroupName], fileName, path);
+                    var df = new DataFile(db.FileGroups[fileGroupName], fileName, path);
                     // Add the container to the memory optimized file group
                     db.FileGroups[fileGroupName].Files.Add(df);
                     // Actually create. Now it exists in the database

@@ -126,7 +126,7 @@ namespace WPFTester
             Server server;
             try
             {
-                ServerConnection cnn = new ServerConnection(_i.ServerName);
+                var cnn = new ServerConnection(_i.ServerName);
                 cnn.Connect();
                 server = new Server(cnn);
 
@@ -197,7 +197,7 @@ namespace WPFTester
                 }
                 if (CreateDatabase.Create(server, _i.DatabaseName + "_InMem", ref error, _cnf.FileGroupName, _cnf.FileName, _cnf.MoPath) == false)
                 {
-                    MessageBox.Show(@"An error occurs while creating the database!" + Environment.NewLine + error,
+                    MessageBox.Show($@"An error occurs while creating the database! {Environment.NewLine} {error}",
                                     @"Error",
                                     MessageBoxButton.OK,
                                     MessageBoxImage.Error);
@@ -243,7 +243,7 @@ namespace WPFTester
 
 
             _dispatcherTimer = new DispatcherTimer();
-            _dispatcherTimer.Tick += new EventHandler(dispatcherTimer_Tick);
+            _dispatcherTimer.Tick += dispatcherTimer_Tick;
             _dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
             _dispatcherTimer.Start();
 
@@ -291,19 +291,19 @@ namespace WPFTester
         private void StartConversion()
         {
 
-            ServerConnection cnn = new ServerConnection(_i.ServerName);
+            var cnn = new ServerConnection(_i.ServerName);
             cnn.Connect();
-            Server server = new Server(cnn);
+            var server = new Server(cnn);
 
-            Database db = server.Databases[_i.DatabaseName];
+            var db = server.Databases[_i.DatabaseName];
             // Connect to the In-Memory Database
-            ServerConnection cnnInMem = new ServerConnection(_i.ServerName);
+            var cnnInMem = new ServerConnection(_i.ServerName);
             cnnInMem.Connect();
-            Server serverInMem = new Server(cnnInMem);
-            Database dbInMemory = serverInMem.Databases[_i.InMemoryDataBaseName];
+            var serverInMem = new Server(cnnInMem);
+            var dbInMemory = serverInMem.Databases[_i.InMemoryDataBaseName];
 
             // new features available starting with SQL Server 2017
-            SqlServerMoFeatures enumFeatures = SqlServerMoFeatures.SqlServer2016;
+            var enumFeatures = SqlServerMoFeatures.SqlServer2016;
             if (new Version(server.VersionString) >= new Version(CNewFeaturesVersion))
             {
                 enumFeatures = SqlServerMoFeatures.SqlServer2017;
@@ -359,7 +359,7 @@ namespace WPFTester
             }
             else
             {
-                this.Dispatcher.Invoke(() =>
+                Dispatcher.Invoke(() =>
                 {
                     txtDescription.Text = text;
                 });
@@ -377,7 +377,7 @@ namespace WPFTester
             }
             else
             {
-                this.Dispatcher.Invoke(() =>
+                Dispatcher.Invoke(() =>
                 {
                     lblOveral.Text = text;
                 });
@@ -542,7 +542,7 @@ namespace WPFTester
                 _mainObr = null;
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if(Debugger.IsAttached)
                     Debugger.Break();
@@ -552,7 +552,7 @@ namespace WPFTester
             ProgressBar1.Visibility = Visibility.Hidden;
             if (_success)
             {
-                TimeSpan ts = _t2 - _t1;
+                var ts = _t2 - _t1;
                 MessageBox.Show($@"Switching to in-memory OLTP finished successfully. Elapsed time {ts:dd\.hh\:mm\:ss}",
                                 @"Info", 
                                 MessageBoxButton.OK, 
@@ -561,7 +561,7 @@ namespace WPFTester
 
             if (_isAborted == false)
             {
-                string fileName = _i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
+                var fileName = _i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
                 if (File.Exists(fileName))
                     File.Delete(fileName);
                 File.WriteAllText(fileName, _sb.ToString());
@@ -596,7 +596,7 @@ namespace WPFTester
                 return;
 
             }
-            string text = txtUserName.Text;
+            var text = txtUserName.Text;
             if (cmbAuth.SelectedIndex != 0 && (text.Trim().Equals(string.Empty) || txtPassword.Password.Trim().Equals(string.Empty)))
             {
 
@@ -616,7 +616,7 @@ namespace WPFTester
         private void BindDataBases(ComboBox cmb)
         {
             cmb.Items.Clear();
-            DataSet ds = DataAccess.GetDataSet(
+            var ds = DataAccess.GetDataSet(
                 DataAccess.GetConnectionString(
                     txtServer.Text,
                     "master",
@@ -704,24 +704,22 @@ namespace WPFTester
         {
             if (_isLoaded == false)
                 return;
-            if (cmbAuth.SelectedItem != null)
-            {
-                if (_isError)
-                    _isError = false;
+            if (cmbAuth.SelectedItem == null) return;
+            if (_isError)
+                _isError = false;
 
-                if (cmbAuth.SelectedIndex == 0)
-                {
-                    txtUserName.Text = "";
-                    txtPassword.Password = "";
-                    txtUserName.IsEnabled = false;
-                    txtPassword.IsEnabled = false;
-                }
-                else if (cmbAuth.SelectedIndex == 1)
-                {
-                    txtUserName.IsEnabled = true;
-                    txtPassword.IsEnabled = true;
-                    txtUserName.Focus();
-                }
+            if (cmbAuth.SelectedIndex == 0)
+            {
+                txtUserName.Text = "";
+                txtPassword.Password = "";
+                txtUserName.IsEnabled = false;
+                txtPassword.IsEnabled = false;
+            }
+            else if (cmbAuth.SelectedIndex == 1)
+            {
+                txtUserName.IsEnabled = true;
+                txtPassword.IsEnabled = true;
+                txtUserName.Focus();
             }
         }
         private void SetupRows(bool v)

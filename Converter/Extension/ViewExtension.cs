@@ -18,7 +18,7 @@ namespace Converter.Extension
                                      ILog logger
             )
         {
-            bool retValue = false;
+            var retValue = false;
             if (self.IsSystemObject)
                 return true;
 
@@ -30,7 +30,7 @@ namespace Converter.Extension
 
 
             logger.Log("VIEW", self.FName());
-            View newsp = new View(inMemDatabase, self.Name, self.Schema);
+            var newsp = new View(inMemDatabase, self.Name, self.Schema);
             newsp.CopyPropertiesFrom(self);
             try
             {

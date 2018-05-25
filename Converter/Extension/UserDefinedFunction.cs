@@ -18,7 +18,7 @@ namespace Converter.Extension
                                      ref string error, 
                                      ILog logger)
         {
-            bool retValue = false;
+            var retValue = false;
             if (self.IsSystemObject)
                 return true;
 
@@ -29,7 +29,7 @@ namespace Converter.Extension
             }
 
             logger.Log("UDF", self.FName());
-            UserDefinedFunction newsp = new UserDefinedFunction(inMemDatabase, self.Name, self.Schema);
+            var newsp = new UserDefinedFunction(inMemDatabase, self.Name, self.Schema);
             newsp.CopyPropertiesFrom(self);
             try
             {

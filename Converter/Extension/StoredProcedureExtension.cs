@@ -33,7 +33,7 @@ namespace Converter.Extension
 
 
             logger.Log("SP", self.FName());
-            StoredProcedure newsp = new StoredProcedure(inMemDatabase, self.Name, self.Schema);
+            var newsp = new StoredProcedure(inMemDatabase, self.Name, self.Schema);
             newsp.CopyPropertiesFrom(self);
             try
             {

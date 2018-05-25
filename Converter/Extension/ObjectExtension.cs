@@ -1,6 +1,5 @@
 ﻿using Microsoft.SqlServer.Management.Smo;
 using System;
-using System.Diagnostics;
 using System.Reflection;
 
 namespace Converter.Extension
@@ -23,7 +22,7 @@ namespace Converter.Extension
     {
         public static void CopyPropertiesFrom(this object self, object parent)
         {
-            PropertyInfo[] fromProperties = parent.GetType().GetProperties();
+            var fromProperties = parent.GetType().GetProperties();
             PropertyInfo toProperty;
 
 
@@ -31,20 +30,20 @@ namespace Converter.Extension
             {
                 if (fromProperty.CanWrite == false)
                     continue;
-                if (fromProperty.Name.ToLower().Equals("parent") || fromProperty.Name.ToLower().Equals("name"))
+                if ("parent".Equals(fromProperty.Name.ToLower()) || fromProperty.Name.ToLower().Equals("name"))
                     continue;
                 switch (self)
                 {
                     case Column _ when
-                        $"GraphType_ColumnEncryptionKeyID_ColumnEncryptionKeyName_EncryptionAlgorithm_EncryptionType_DistributionColumnName_IsDistributedColumn"
+                        @"GraphType_ColumnEncryptionKeyID_ColumnEncryptionKeyName_EncryptionAlgorithm_EncryptionType_DistributionColumnName_IsDistributedColumn"
                             .Contains(fromProperty.Name):
                     case UserDefinedFunction _ when
-                        $"AssemblyName_ClassName_ExecutionContext_ExecutionContextPrincipal_FunctionType_IsEncrypted_IsSchemaBound_MethodName_TableVariableName"
+                        @"AssemblyName_ClassName_ExecutionContext_ExecutionContextPrincipal_FunctionType_IsEncrypted_IsSchemaBound_MethodName_TableVariableName"
                             .Contains(fromProperty.Name):
                     case StoredProcedure _ when
-                        $"AssemblyName_ClassName_ExecutionContext_ExecutionContextPrincipal_ForReplication_IsEncrypted_MethodName_Recompile"
+                        @"AssemblyName_ClassName_ExecutionContext_ExecutionContextPrincipal_ForReplication_IsEncrypted_MethodName_Recompile"
                             .Contains(fromProperty.Name):
-                    case View _ when $"IsEncrypted_IsSchemaBound".Contains(fromProperty.Name):
+                    case View _ when @"IsEncrypted_IsSchemaBound".Contains(fromProperty.Name):
                         continue;
                 }
 
@@ -54,7 +53,7 @@ namespace Converter.Extension
                     toProperty = self.GetType().GetProperty(fromProperty.Name);
                     toProperty?.SetValue(self, fromProperty.GetValue(parent));
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     //if (Debugger.IsAttached)
                     //   Debugger.Break();

@@ -171,7 +171,7 @@ namespace GuiTester
                                 MessageBoxIcon.Error);
                 return;
             }
-            string error = "";
+            var error = "";
 
 
             if (_i.CreateNew)
@@ -185,7 +185,7 @@ namespace GuiTester
                 }
                 if (Converter.Utility.CreateDatabase.Create(server, _i.DatabaseName + "_InMem", ref error, _cnf.FileGroupName, _cnf.FileName, _cnf.MoPath) == false)
                 {
-                    MessageBox.Show(@"An error occurs while creating the database!" + Environment.NewLine + error,
+                    MessageBox.Show($@"An error occurs while creating the database! {Environment.NewLine} { error}",
                                     @"Error",
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Error);
@@ -194,7 +194,9 @@ namespace GuiTester
             }
             else
             {
-                if (MessageBox.Show($@"You choose to convert the database {_i.DatabaseName.ToUpper()} to In-Mem  {_i.InMemoryDataBaseName.ToUpper()}.
+                if (MessageBox.Show($@"You choose to convert the database {_i.DatabaseName.ToUpper()} to In-Mem  {
+                                _i.InMemoryDataBaseName.ToUpper()
+                            }.
                                                         Are you sure?",
                                     @"Question", 
                                     MessageBoxButtons.YesNo,
@@ -202,7 +204,8 @@ namespace GuiTester
                 {
                     return;
                 }
-                if (Converter.Utility.CreateDatabase.Create(server, _i.InMemoryDataBaseName, ref error, _cnf.FileGroupName, _cnf.FileName, _cnf.MoPath) == false)
+                if (Converter.Utility.CreateDatabase.Create(server, _i.InMemoryDataBaseName, ref error,
+                        _cnf.FileGroupName, _cnf.FileName, _cnf.MoPath) == false)
                 {
                     MessageBox.Show(@"An error occurs while creating the database!",
                                     @"Error",
@@ -269,19 +272,19 @@ namespace GuiTester
         /// </summary>
         private void StartConversion()
         {
-            ServerConnection cnn = new ServerConnection(_i.ServerName);
+            var cnn = new ServerConnection(_i.ServerName);
             cnn.Connect();
-            Server server = new Server(cnn);
+            var server = new Server(cnn);
 
-            Database db = server.Databases[_i.DatabaseName];
+            var db = server.Databases[_i.DatabaseName];
             // Connect to the In-Memory Database
-            ServerConnection cnnInMem = new ServerConnection(_i.ServerName);
+            var cnnInMem = new ServerConnection(_i.ServerName);
             cnnInMem.Connect();
-            Server serverInMem = new Server(cnnInMem);
-            Database dbInMemory = serverInMem.Databases[_i.InMemoryDataBaseName];
+            var serverInMem = new Server(cnnInMem);
+            var dbInMemory = serverInMem.Databases[_i.InMemoryDataBaseName];
 
             // new features available starting with SQL Server 2017
-            SqlServerMoFeatures enumFeatures = SqlServerMoFeatures.SqlServer2016;
+            var enumFeatures = SqlServerMoFeatures.SqlServer2016;
             if (new Version(server.VersionString) >= new Version(CNewFeaturesVersion))
             {
                 enumFeatures = SqlServerMoFeatures.SqlServer2017;
@@ -316,81 +319,82 @@ namespace GuiTester
 
         #region " Callback "
 
-        delegate void SetTextCallback(string text);
-        delegate void SetProgressBarValueCallBack(int text);
+        private delegate void SetTextCallback(string text);
+
+        private delegate void SetProgressBarValueCallBack(int text);
 
         public void SetTextCode(string text)
         {
             // InvokeRequired required compares the thread ID of the
             // calling thread to the thread ID of the creating thread.
             // If these threads are different, it returns true.
-            if (this.txtCode.InvokeRequired)
+            if (txtCode.InvokeRequired)
             {
-                SetTextCallback d = new SetTextCallback(SetTextCode);
-                this.Invoke(d, new object[] { text });
+                var d = new SetTextCallback(SetTextCode);
+                Invoke(d, new object[] { text });
                 d = null;
             }
             else
             {
-                this.txtCode.Text = text;
+                txtCode.Text = text;
             }
         }
         public void SetTextDescription(string text)
         {
-            if (this.txtDescription.InvokeRequired)
+            if (txtDescription.InvokeRequired)
             {
-                SetTextCallback d = new SetTextCallback(SetTextDescription);
-                this.Invoke(d, new object[] { text });
+                var d = new SetTextCallback(SetTextDescription);
+                Invoke(d, new object[] { text });
                 d = null;
             }
             else
             {
-                this.txtDescription.Text = text;
+                txtDescription.Text = text;
             }
         }
 
 
         public void SetLabelText(string text)
         {
-            if (this.lblOveral.InvokeRequired)
+            if (lblOveral.InvokeRequired)
             {
-                SetTextCallback d = new SetTextCallback(SetLabelText);
-                this.Invoke(d, new object[] { text });
+                var d = new SetTextCallback(SetLabelText);
+                Invoke(d, new object[] { text });
                 d = null;
             }
             else
             {
-                this.lblOveral.Text = text;
+                lblOveral.Text = text;
             }
         }
 
-        void SetProgresBarValue(int text)
+        private void SetProgresBarValue(int text)
         {
-            if (this.ProgressBar1.InvokeRequired)
+            if (ProgressBar1.InvokeRequired)
             {
-                SetProgressBarValueCallBack d = new SetProgressBarValueCallBack(SetProgresBarValue);
-                this.Invoke(d, new object[] { text });
+                var d = new SetProgressBarValueCallBack(SetProgresBarValue);
+                Invoke(d, new object[] { text });
                 d = null;
             }
             else
             {
-                if (text > this.ProgressBar1.Maximum)
-                    text = this.ProgressBar1.Maximum;
-                this.ProgressBar1.Value = text;
+                if (text > ProgressBar1.Maximum)
+                    text = ProgressBar1.Maximum;
+                ProgressBar1.Value = text;
             }
         }
 
-        void SetProgressBarMaxValue(int text)
+        private void SetProgressBarMaxValue(int text)
         {
-            if (this.ProgressBar1.InvokeRequired)
+            if (ProgressBar1.InvokeRequired)
             {
-                SetProgressBarValueCallBack d = new SetProgressBarValueCallBack(SetProgressBarMaxValue);
-                this.Invoke(d, new object[] { text });
+                var d = new SetProgressBarValueCallBack(SetProgressBarMaxValue);
+                Invoke(d, new object[] { text });
                 d = null;
             }
             else
             {
-                this.ProgressBar1.Maximum = text;
+                ProgressBar1.Maximum = text;
             }
         }
         #endregion
@@ -423,23 +427,23 @@ namespace GuiTester
             SetTextDescription(txt);
 
         }
-        private StringBuilder sb = null;
+        private StringBuilder _sb;
         void ILog.LogWarErr(string text, string txt)
         {
-            if (sb == null)
+            if (_sb == null)
             {
-                sb = new StringBuilder();
-                sb.Append(
+                _sb = new StringBuilder();
+                _sb.Append(
                     $"****Summary report - converting  {_i.DatabaseName} to IN-MEM OLTP {_i.InMemoryDataBaseName} on server {_i.ServerName}\r\n");
-                sb.Append("\r\n");
-                sb.Append("****List of warnings and errors");
-                sb.Append("\r\n");
-                sb.Append("\r\n");
+                _sb.Append("\r\n");
+                _sb.Append("****List of warnings and errors");
+                _sb.Append("\r\n");
+                _sb.Append("\r\n");
             }
                 
 
-            sb.Append(text + " " + txt + "\r\n");
-            sb.Append(Environment.NewLine);
+            _sb.Append($"{text} {txt}\r\n");
+            _sb.Append(Environment.NewLine);
         }
 
         int ILog.CurrentItem { get; set; }
@@ -451,7 +455,7 @@ namespace GuiTester
         #region " Cancel the conversation process "
 
         private bool _isAborted = false;
-        private void btnCancel_Click(object sender, EventArgs e)
+        private void BtnCancelClick(object sender, EventArgs e)
         {
             if (MessageBox.Show(@"You choose to stop conversation process.
                                      Are you sure?", 
@@ -474,9 +478,10 @@ namespace GuiTester
                     }
 
                 }
-                catch (Exception ex)
+                catch (Exception )
                 {
-
+                    if(Debugger.IsAttached)
+                        Debugger.Break();
                 }
             }
             _isAborted = true;
@@ -490,7 +495,7 @@ namespace GuiTester
             btnConvertToMO.Enabled = true;
             grpConnection.Enabled = true;
             grpOptions.Enabled = true;
-            sb = null;
+            _sb = null;
 
         }
 
@@ -510,9 +515,10 @@ namespace GuiTester
                 _mainObr = null;
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-
+                if(Debugger.IsAttached)
+                    Debugger.Break();
             }
             _t2 = DateTime.Now;
 
@@ -532,10 +538,10 @@ namespace GuiTester
             SetLabelText("");
             if (_isAborted == false)
             {
-                string fileName = _i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
+                var fileName = _i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
                 if (File.Exists(fileName))
                     File.Delete(fileName);
-                File.WriteAllText(fileName, sb.ToString());
+                File.WriteAllText(fileName, _sb.ToString());
                 // start notepad and disply the configuration
                 Process.Start(fileName);
             }
@@ -546,7 +552,7 @@ namespace GuiTester
 
             SetLabelText("");
             _cnf.LoadConfig();
-            sb = null;
+            _sb = null;
 
 
         }
@@ -643,7 +649,7 @@ namespace GuiTester
         private void BindDataBases(ComboBox cmb)
         {
             cmb.Items.Clear();
-            DataSet ds = DataAccess.GetDataSet(
+            var ds = DataAccess.GetDataSet(
                 DataAccess.GetConnectionString(
                     txtServer.Text,
                     "master",

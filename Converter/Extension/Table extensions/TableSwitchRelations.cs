@@ -27,7 +27,7 @@ namespace Converter.Extension
                     logger.Log("\t" + "Already exists", fk.Name);
                     return true;
                 }
-                ForeignKey newFk = new ForeignKey(inMemDatabase.Tables[self.Name, self.Schema], fk.Name);
+                var newFk = new ForeignKey(inMemDatabase.Tables[self.Name, self.Schema], fk.Name);
                 newFk.CopyPropertiesFrom(fk);
                 newFk.IsMemoryOptimized = V;
                 foreach (ForeignKeyColumn fkc in fk.Columns)
@@ -55,9 +55,9 @@ namespace Converter.Extension
                 }
                 catch (Exception ex)
                 {
-                    error = string.Join(Environment.NewLine + "\t", ex.CollectThemAll(ex1 => ex1.InnerException)
+                    error = string.Join($"{Environment.NewLine}\t", ex.CollectThemAll(ex1 => ex1.InnerException)
                                        .Select(ex1 => ex1.Message));
-                    logger.LogWarErr("Ralation Error", newFk.Name + " " + error);
+                    logger.LogWarErr("Ralation Error", $"{newFk.Name} {error}");
                     return false;
                 }
 

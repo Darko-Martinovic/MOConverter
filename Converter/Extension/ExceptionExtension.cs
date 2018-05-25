@@ -24,10 +24,7 @@ namespace Converter.Extension
         public static IEnumerable<TSource> CollectThemAll<TSource>(
             this TSource source,
             Func<TSource, TSource> nextItem)
-            where TSource : class
-        {
-            return CollectThemAll(source, nextItem, s => s != null);
-        }
+            where TSource : class => CollectThemAll(source, nextItem, s => s != null);
     }
 
 }
