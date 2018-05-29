@@ -96,7 +96,7 @@ namespace GuiTester
                 CreateNew = chkNewDatabase.Checked
             };
             if (_i.CreateNew)
-                _i.InMemoryDataBaseName = _i.DatabaseName + "_InMem";
+                _i.InMemoryDataBaseName = $"{_i.DatabaseName}_InMem";
             //create options
             _o = new Options {CopyData = chkCopyData.Checked};
             if (rbHash.Checked)
@@ -331,7 +331,7 @@ namespace GuiTester
             if (txtCode.InvokeRequired)
             {
                 var d = new SetTextCallback(SetTextCode);
-                Invoke(d, new object[] { text });
+                Invoke(d, text);
                 d = null;
             }
             else
@@ -344,7 +344,7 @@ namespace GuiTester
             if (txtDescription.InvokeRequired)
             {
                 var d = new SetTextCallback(SetTextDescription);
-                Invoke(d, new object[] { text });
+                Invoke(d, text);
                 d = null;
             }
             else
@@ -359,7 +359,7 @@ namespace GuiTester
             if (lblOveral.InvokeRequired)
             {
                 var d = new SetTextCallback(SetLabelText);
-                Invoke(d, new object[] { text });
+                Invoke(d, text);
                 d = null;
             }
             else
@@ -373,7 +373,7 @@ namespace GuiTester
             if (ProgressBar1.InvokeRequired)
             {
                 var d = new SetProgressBarValueCallBack(SetProgresBarValue);
-                Invoke(d, new object[] { text });
+                Invoke(d, text);
                 d = null;
             }
             else
@@ -389,7 +389,7 @@ namespace GuiTester
             if (ProgressBar1.InvokeRequired)
             {
                 var d = new SetProgressBarValueCallBack(SetProgressBarMaxValue);
-                Invoke(d, new object[] { text });
+                Invoke(d, text);
                 d = null;
             }
             else
@@ -538,7 +538,7 @@ namespace GuiTester
             SetLabelText("");
             if (_isAborted == false)
             {
-                var fileName = _i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
+                var fileName = $"{_i.DatabaseName}{DateTime.Now:yyyy_mm_dd_HH_mm_ss}.txt";
                 if (File.Exists(fileName))
                     File.Delete(fileName);
                 File.WriteAllText(fileName, _sb.ToString());

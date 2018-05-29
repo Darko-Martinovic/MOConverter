@@ -23,23 +23,23 @@ namespace Converter.Extension
                 switch (c.DataType.SqlDataType)
                 {
                     case Xml:
-                        buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(max) ) " + c.Name);
+                        buildInto.Append($"CAST({c.QName()} AS NVARCHAR(max) ) {c.Name}");
                         break;
                     case HierarchyId:
                     case Geography:
                     case Geometry:
-                        buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(1000) ) " + c.Name);
+                        buildInto.Append($"CAST({c.QName()} AS NVARCHAR(1000) ) {c.Name}");
                         break;
                     case Variant:
                     case Text:
                     case NText:
-                        buildInto.Append("CAST(" + c.QName() + " AS NVARCHAR(max) ) " + c.Name);
+                        buildInto.Append($"CAST({c.QName()} AS NVARCHAR(max) ) {c.Name}");
                         break;
                     case Image:
-                        buildInto.Append("CAST(" + c.QName() + " AS VARBINARY(max) ) " + c.Name);
+                        buildInto.Append($"CAST({c.QName()} AS VARBINARY(max) ) {c.Name}");
                         break;
                     case SqlDataType.DateTimeOffset:
-                        buildInto.Append("CAST(" + c.QName() + " AS DATETIME2 ) " + c.Name);
+                        buildInto.Append($"CAST({c.QName()} AS DATETIME2 ) {c.Name}");
                         break;
                     default:
                         buildInto.Append(c.QName());
@@ -57,7 +57,8 @@ namespace Converter.Extension
             return retValue;
         }
 
-        public static string IdentityInsStm(this Table self, bool isOn) => "SET IDENTITY_INSERT " + self.FName() + (isOn ? " ON;" : " OFF");
+        public static string IdentityInsStm(this Table self, bool isOn) =>
+            $"SET IDENTITY_INSERT {self.FName()}{(isOn ? " ON;" : " OFF")}";
 
         /// <summary>
         /// Build column list for insert

@@ -12,7 +12,7 @@ namespace Converter.Extension
         /// <param name="self"></param>
         /// <returns></returns>
         public static string FName(this Table self) =>
-            "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
+            $"[{self.Parent.Name}].[{self.Schema}].[{self.Name}]";
 
     }
 }

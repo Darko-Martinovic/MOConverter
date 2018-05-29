@@ -7,7 +7,7 @@ namespace Converter.Configuration
     public class Configuration
     {
 
-        public string FullName => "[" + HelperSchema + "].[" + HelperTableName + "]";
+        public string FullName => $"[{HelperSchema}].[{HelperTableName}]";
 
         [StSetupFromConfig(true)] public string EpName { get; set; } = "MOIndexEp";
 

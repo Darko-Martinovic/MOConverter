@@ -7,7 +7,7 @@ namespace Converter.Extension
 {
     public static class ViewExtension
     {
-        internal static string FName(this View self) => "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
+        internal static string FName(this View self) => $"[{self.Parent.Name}].[{self.Schema}].[{self.Name}]";
 
         public static bool SwitchToMo(
                                      this View self, 

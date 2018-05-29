@@ -7,7 +7,8 @@ namespace Converter.Extension
 {
     public static class UserDefinedTableTypesExtension
     {
-        internal static string FName(this UserDefinedTableType self) => "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
+        internal static string FName(this UserDefinedTableType self) =>
+            $"[{self.Parent.Name}].[{self.Schema}].[{self.Name}]";
         public static bool SwitchToMo(this UserDefinedTableType self,
                                       Database inMemDatabase, 
                                       Database traditional, 
