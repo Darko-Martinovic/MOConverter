@@ -8,7 +8,7 @@ namespace Converter.Extension
     public static class StoredProcedureExtension
     {
 
-        public static string FName(this StoredProcedure self) => "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
+        public static string FName(this StoredProcedure self) => $"[{self.Parent.Name}].[{self.Schema}].[{self.Name}]";
 
         public static bool SwitchToMo(
                                     this StoredProcedure self, 

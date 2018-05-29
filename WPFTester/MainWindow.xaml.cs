@@ -98,7 +98,7 @@ namespace WPFTester
                 CreateNew = chkNewDatabase.IsChecked == true
             };
             if (_i.CreateNew)
-                _i.InMemoryDataBaseName = _i.DatabaseName + "_InMem";
+                _i.InMemoryDataBaseName = $"{_i.DatabaseName}_InMem";
             //create options
             _o = new Options
             {
@@ -243,7 +243,7 @@ namespace WPFTester
 
 
             _dispatcherTimer = new DispatcherTimer();
-            _dispatcherTimer.Tick += dispatcherTimer_Tick;
+            _dispatcherTimer.Tick += DispatcherTimer_Tick;
             _dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
             _dispatcherTimer.Start();
 
@@ -484,7 +484,7 @@ namespace WPFTester
         #region " Cancel the conversation process "
 
         private bool _isAborted;
-        private void btnCancel_Click_1(object sender, RoutedEventArgs e)
+        private void BtnCancel_Click_1(object sender, RoutedEventArgs e)
         {
             if (MessageBox.Show($@"You choose to stop conversation process.{Environment.NewLine}Are you sure?",
                                 @"Question",
@@ -529,7 +529,7 @@ namespace WPFTester
         #endregion
 
         #region " The timer controls the working thread "
-        private void dispatcherTimer_Tick(object sender, EventArgs e)
+        private void DispatcherTimer_Tick(object sender, EventArgs e)
         {
             if (_mainObr == null || _mainObr.IsAlive)
             {

@@ -8,7 +8,8 @@ namespace Converter.Extension
 {
     public static class UserDefinedFunctionExtension
     {
-        internal static string FName(this UserDefinedFunction self) => "[" + self.Parent.Name + "].[" + self.Schema + "].[" + self.Name + "]";
+        internal static string FName(this UserDefinedFunction self) =>
+            $"[{self.Parent.Name}].[{self.Schema}].[{self.Name}]";
 
         public static bool SwitchToMo(
                                      this UserDefinedFunction self, 

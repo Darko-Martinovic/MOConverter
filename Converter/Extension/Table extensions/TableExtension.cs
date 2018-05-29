@@ -22,13 +22,13 @@ namespace Converter.Extension
                                       ILog logger,
                                       SqlServerMoFeatures enumFeatures)
         {
-            bool retValue = false;
-            string schemaName = self.Schema;
-            string dataBaseName = self.Parent.Name;
+            var retValue = false;
+            var schemaName = self.Schema;
+            var dataBaseName = self.Parent.Name;
 
             if (inMemDatabase.Schemas.Contains(schemaName) == false)
             {
-                Schema hr = new Schema(inMemDatabase, schemaName);
+                var hr = new Schema(inMemDatabase, schemaName);
                 inMemDatabase.Schemas.Add(hr);
                 inMemDatabase.Schemas[schemaName].Create();
             }
@@ -40,10 +40,10 @@ namespace Converter.Extension
             }
 
 
-            bool hasIdentities = false;
+            var hasIdentities = false;
 
 
-            Table newTable = new Table(inMemDatabase, self.Name, schemaName)
+            var newTable = new Table(inMemDatabase, self.Name, schemaName)
             {
                 // default true
                 IsMemoryOptimized = true,
@@ -77,7 +77,7 @@ namespace Converter.Extension
                     if (o.UseHashIndexes == IndexDecision.Hash)
                     {
                         idx.IndexType = IndexType.NonClusteredHashIndex;
-                        idx.BucketCount = self.RowCount == 0 ? 64 : (int)self.RowCount *2;
+                        idx.BucketCount = self.RowCount != 0 ? (int)self.RowCount *2 : 64;
                     }
                     else if (o.UseHashIndexes == IndexDecision.Range)
                         idx.IndexType = IndexType.NonClusteredIndex;
@@ -109,7 +109,7 @@ namespace Converter.Extension
                 }
             }
 
-            int noIndexes = hasPrimaryKey ? 1 : 0;
+            var noIndexes = hasPrimaryKey ? 1 : 0;
             foreach (Index i in self.Indexes)
             {
                 if (i.IndexKeyType == IndexKeyType.DriPrimaryKey)
@@ -121,8 +121,8 @@ namespace Converter.Extension
                     // Limit the total number of indexes to 8 for SQLServer2016
                     if (enumFeatures == SqlServerMoFeatures.SqlServer2016 && noIndexes == 8)
                     {
-                        logger.LogWarErr("Error:Create index failed", $"Could not create in-memory index {i.Name} " +
-                                                                      $"because it exceeds the maximum of 8 allowed per table or view.");
+                        logger.LogWarErr("Error:Create index failed",
+                            $"Could not create in-memory index {i.Name} because it exceeds the maximum of 8 allowed per table or view.");
                         continue;
                     }
 
@@ -212,6 +212,7 @@ namespace Converter.Extension
                 if (inMemDatabase.Tables.Contains(cnf.HelperTableName, cnf.HelperSchema))
                     inMemDatabase.Tables[cnf.HelperTableName, cnf.HelperSchema].Drop();
 
+                
                 try
                 {
                     logger.Log("Insert data ", newTable.FName());
@@ -219,7 +220,8 @@ namespace Converter.Extension
                     traditional.ExecuteNonQuery(self.InsertIntoStm(inMemDatabase.Name, cnf.FullName));
                     //Insert statement
                     var test = inMemDatabase.Tables[cnf.HelperTableName, cnf.HelperSchema];
-                    inMemDatabase.ExecuteNonQuery(newTable.FullInsertStm(test.SelectStm(), hasIdentities, cnf.FullName));
+                    inMemDatabase.ExecuteNonQuery(newTable.FullInsertStm(test.SelectStm(), hasIdentities,
+                        cnf.FullName));
                     retValue = true;
                     logger.Log("OK ", newTable.FName());
                     //
