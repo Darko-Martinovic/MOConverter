@@ -1,4 +1,10 @@
+The article tries to address the main issues that are involved when you try to migrate your disk-based database 
+to In-Memory technology. 
+Converting a SQLServer Database to InMemory OLTP 
+https://www.red-gate.com/simple-talk/sql/t-sql-programming/converting-database-memory-oltp/
+
 The largest database I ported to In-Memory OLTP by using this tool, was 15 GB in size and contains 1200 tables, 2200 indexes, and 2600 relations. The largest table was 4 GB in size.
+
 
 ## :white_check_mark: To convert your database to In-Memory OLTP execute following code
 
