@@ -1,4 +1,5 @@
 ﻿
+
 namespace Converter.Interface
 {
     public interface ILog

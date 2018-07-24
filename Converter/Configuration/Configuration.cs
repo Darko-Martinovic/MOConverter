@@ -22,7 +22,8 @@ namespace Converter.Configuration
         [StSetupFromConfig(true)] public string FileName { get; set; } = "mofile";
 
 
-        public string MMoPath = @"C:\MOCONTAINTER";
+        private string MMoPath = @"C:\MOCONTAINTER";
+
         [StSetupFromConfig(true)]
         public string MoPath
         {
@@ -59,7 +60,7 @@ namespace Converter.Configuration
 
     }
 
-    [System.AttributeUsage(AttributeTargets.Property)]
+    [AttributeUsage(AttributeTargets.Property)]
     public class StSetupFromConfig : Attribute
     {
         public StSetupFromConfig(bool wValueFromConfig) => ValueFromConfig = wValueFromConfig;

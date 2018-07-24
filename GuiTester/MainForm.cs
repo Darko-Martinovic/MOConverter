@@ -13,10 +13,11 @@ using System.Diagnostics;
 using Converter.Inputs;
 using Converter.DataAccess;
 using Converter.Enums;
+// ReSharper disable RedundantAssignment
 
 namespace GuiTester
 {
-    public partial class MainForm : Form, Converter.Interface.ILog
+    public partial class MainForm : Form, ILog
     {
         public MainForm()
         {
@@ -110,10 +111,10 @@ namespace GuiTester
             _o.SchemaContains = txtSchema.Text.Trim();
             _o.TableContains = txtTableContains.Text.Trim();
 
-            Server server = null;
+            Server server;
             try
             {
-                ServerConnection cnn = new ServerConnection(_i.ServerName);
+                var cnn = new ServerConnection(_i.ServerName);
                 cnn.Connect();
                 server = new Server(cnn);
 
@@ -259,10 +260,10 @@ namespace GuiTester
         private const string CNewFeaturesVersion = "14.0.1000.169";
 
 
-        private Converter.Configuration.Configuration _cnf = null;
+        private Converter.Configuration.Configuration _cnf;
         private DateTime _t1;
         private DateTime _t2;
-        private bool _success = false;
+        private bool _success;
         #endregion
 
         #region " Start the conversion "
@@ -291,7 +292,7 @@ namespace GuiTester
             }
             _success = db.SwitchToMo(
                                     dbInMemory, 
-                                    (ILog)this, 
+                                    this, 
                                     _cnf, 
                                     _o,
                                     enumFeatures);
@@ -323,7 +324,7 @@ namespace GuiTester
 
         private delegate void SetProgressBarValueCallBack(int text);
 
-        public void SetTextCode(string text)
+        private void SetTextCode(string text)
         {
             // InvokeRequired required compares the thread ID of the
             // calling thread to the thread ID of the creating thread.
@@ -339,7 +340,8 @@ namespace GuiTester
                 txtCode.Text = text;
             }
         }
-        public void SetTextDescription(string text)
+
+        private void SetTextDescription(string text)
         {
             if (txtDescription.InvokeRequired)
             {
@@ -354,7 +356,7 @@ namespace GuiTester
         }
 
 
-        public void SetLabelText(string text)
+        private void SetLabelText(string text)
         {
             if (lblOveral.InvokeRequired)
             {
@@ -454,7 +456,7 @@ namespace GuiTester
 
         #region " Cancel the conversation process "
 
-        private bool _isAborted = false;
+        private bool _isAborted;
         private void BtnCancelClick(object sender, EventArgs e)
         {
             if (MessageBox.Show(@"You choose to stop conversation process.

@@ -16,13 +16,14 @@ using Converter.Inputs;
 using Converter.DataAccess;
 using Converter.Enums;
 using Converter.Utility;
+// ReSharper disable RedundantAssignment
 
 namespace WPFTester
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window,ILog
+    public partial class MainWindow : ILog
     {
         public MainWindow()
         {
@@ -310,7 +311,7 @@ namespace WPFTester
             }
             _success = db.SwitchToMo(
                                     dbInMemory,
-                                    (ILog)this,
+                                    this,
                                     _cnf,
                                     _o,
                                     enumFeatures);
@@ -343,7 +344,7 @@ namespace WPFTester
             else
             {
 
-                this.Dispatcher.Invoke(() =>
+                Dispatcher.Invoke(() =>
                 {
                     txtCode.Text = text;
                 });
@@ -397,7 +398,7 @@ namespace WPFTester
             else
             {
 
-                this.Dispatcher.Invoke(() =>
+                Dispatcher.Invoke(() =>
                 {
                     if (text > ProgressBar1.Maximum)
                         text = (int)ProgressBar1.Maximum;
@@ -412,14 +413,14 @@ namespace WPFTester
         {
             if (Dispatcher.CheckAccess())
             {
-                this.ProgressBar1.Maximum = text;
+                ProgressBar1.Maximum = text;
             }
             else
             {
 
-                this.Dispatcher.Invoke(() =>
+                Dispatcher.Invoke(() =>
                 {
-                    this.ProgressBar1.Maximum = text;
+                    ProgressBar1.Maximum = text;
                 });
 
 
@@ -584,7 +585,7 @@ namespace WPFTester
 
         #region " Inputs manipulations "
 
-        private void ComboBox_DropDownOpened(object sender, System.EventArgs e)
+        private void ComboBox_DropDownOpened(object sender, EventArgs e)
         {
             if (txtServer.Text.Trim().Equals(string.Empty))
             {
@@ -679,7 +680,7 @@ namespace WPFTester
 
         }
 
-        private void Destination_DropDownOpened(object sender, System.EventArgs e)
+        private void Destination_DropDownOpened(object sender, EventArgs e)
         {
             if (_isLoaded == false)
                 return;
