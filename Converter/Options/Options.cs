@@ -1,4 +1,5 @@
 ﻿
+
 namespace Converter.Options
 {
     public class Options

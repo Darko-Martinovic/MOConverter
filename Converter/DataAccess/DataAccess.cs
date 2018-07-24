@@ -5,7 +5,7 @@ using System.Data.SqlClient;
 
 namespace Converter.DataAccess
 {
-    public class DataAccess
+    public static class DataAccess
     {
         public static DataSet GetDataSet(
                                          string connectionString, 
@@ -42,7 +42,7 @@ namespace Converter.DataAccess
             }
             catch (Exception ex)
             {
-                error = ex?.Message;
+                error = ex.Message;
             }
             return ds;
         }

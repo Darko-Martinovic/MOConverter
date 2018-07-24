@@ -1,4 +1,5 @@
 ﻿
+
 namespace Converter.Inputs
 {
     public class Inputs
