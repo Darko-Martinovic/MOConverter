@@ -9,6 +9,7 @@ namespace Converter.Extension
     {
         internal static string FName(this UserDefinedTableType self) =>
             $"[{self.Parent.Name}].[{self.Schema}].[{self.Name}]";
+
         public static bool SwitchToMo(this UserDefinedTableType self,
                                       Database inMemDatabase, 
                                       Database traditional, 
@@ -35,13 +36,16 @@ namespace Converter.Extension
             foreach (Column c in self.Columns)
             {
 
-                new Column(newTable, c.Name).CopyPropertiesFrom(c);
+                var newColumn = new Column(newTable, c.Name);
+                //newColumn.Default = c.Default;
+                newColumn.CopyPropertiesFrom(c);
 
-                TableExtension.SupportUnsupported(new Column(newTable, c.Name), c, traditional, logger, ref error, ref hasIdentities,
+
+                TableExtension.SupportUnsupported(newColumn, c, traditional, logger, ref error, ref hasIdentities,
                     false);
 
 
-                newTable.Columns.Add(new Column(parent: newTable, name: c.Name));
+                newTable.Columns.Add(newColumn);
 
             }
 
