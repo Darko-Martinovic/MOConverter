@@ -104,7 +104,7 @@ namespace Converter.Extension
         public static string InsertIntoStm(this Table self, string baseName, string fullName)
         {
             var sb = new StringBuilder();
-            sb.Append($@" SELECT {self.SelectStm()} INTO {baseName}.{fullName} FROM {self.FName()}");
+            sb.Append($@" SELECT {self.SelectStm()} INTO [{baseName}].{fullName} FROM {self.FName()}");
             var retValue = sb.ToString();
             sb = null;
             return retValue;

@@ -36,7 +36,7 @@ namespace Converter.Utility
                     srv.Databases[databaseName].Create();
                     srv.Refresh();
                    
-                    dbnew.ExecuteNonQuery($"ALTER DATABASE {dbnew.Name}     " +
+                    dbnew.ExecuteNonQuery($"ALTER DATABASE [{dbnew.Name}]     " +
                                           " SET MEMORY_OPTIMIZED_ELEVATE_TO_SNAPSHOT = ON; ");
 
                     if (dbnew.CompatibilityLevel < CompatibilityLevel.Version130)
