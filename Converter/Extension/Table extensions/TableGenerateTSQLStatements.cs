@@ -14,7 +14,7 @@ namespace Converter.Extension
         /// </summary>
         /// <param name="self"></param>
         /// <returns></returns>
-        public static string SelectStm(this Table self)
+        private static string SelectStm(this Table self)
         {
             var buildInto = new StringBuilder();
             var counter1 = 1;
@@ -57,7 +57,7 @@ namespace Converter.Extension
             return retValue;
         }
 
-        public static string IdentityInsStm(this Table self, bool isOn) =>
+        private static string IdentityInsStm(this Table self, bool isOn) =>
             $"SET IDENTITY_INSERT {self.FName()}{(isOn ? " ON;" : " OFF")}";
 
         /// <summary>
@@ -65,10 +65,10 @@ namespace Converter.Extension
         /// </summary>
         /// <param name="self"></param>
         /// <returns></returns>
-        public static string InsertStm(this Table self)
+        private static string InsertStm(this Table self)
         {
             var insertColumn = new StringBuilder();
-            int counter = 1;
+            var counter = 1;
             foreach (Column c in self.Columns)
             {
                 insertColumn.Append(c.QName());
@@ -76,13 +76,13 @@ namespace Converter.Extension
                     insertColumn.Append($",");
                 counter++;
             }
-            string retValue = insertColumn.ToString();
+            var retValue = insertColumn.ToString();
             insertColumn = null;
             return retValue;
         }
 
 
-        public static string FullInsertStm(this Table self, string selectStm, bool hasIdentites, string fullName)
+        private static string FullInsertStm(this Table self, string selectStm, bool hasIdentites, string fullName)
         {
             var sb = new StringBuilder();
 
@@ -101,7 +101,7 @@ namespace Converter.Extension
             return retValue;
         }
 
-        public static string InsertIntoStm(this Table self, string baseName, string fullName)
+        private static string InsertIntoStm(this Table self, string baseName, string fullName)
         {
             var sb = new StringBuilder();
             sb.Append($@" SELECT {self.SelectStm()} INTO [{baseName}].{fullName} FROM {self.FName()}");
