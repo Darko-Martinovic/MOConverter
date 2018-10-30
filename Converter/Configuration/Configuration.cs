@@ -22,13 +22,13 @@ namespace Converter.Configuration
         [StSetupFromConfig(true)] public string FileName { get; set; } = "mofile";
 
 
-        private string MMoPath = @"C:\MOCONTAINTER";
+        private string _mMoPath = @"C:\MOCONTAINTER";
 
         [StSetupFromConfig(true)]
         public string MoPath
         {
-            get => MMoPath;
-            set => MMoPath = value + DateTime.Now.ToString("dd_MM_yyyy_HH_mm_ss");
+            get => _mMoPath;
+            set => _mMoPath = value + DateTime.Now.ToString("dd_MM_yyyy_HH_mm_ss");
         }
 
 

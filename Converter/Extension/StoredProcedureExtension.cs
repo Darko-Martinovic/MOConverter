@@ -7,14 +7,14 @@ namespace Converter.Extension
 {
     public static class StoredProcedureExtension
     {
+        private static string FName(this StoredProcedure self) =>
+            $"{self.Parent.Name.BracketObjectName()}.{self.Schema.BracketObjectName()}.{self.Name.BracketObjectName()}";
 
-        public static string FName(this StoredProcedure self) => $"[{self.Parent.Name}].[{self.Schema}].[{self.Name}]";
+
 
         public static bool SwitchToMo(
                                     this StoredProcedure self, 
                                     Database inMemDatabase, 
-                                    Database traditional, 
-                                    Configuration.Configuration cnf, 
                                     ref string error, 
                                     ILog logger
             )

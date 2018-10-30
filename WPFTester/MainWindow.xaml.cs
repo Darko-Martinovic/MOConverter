@@ -207,14 +207,16 @@ namespace WPFTester
             }
             else
             {
-                if (MessageBox.Show($@"You choose to convert the database {_i.DatabaseName.ToUpper()} to In-Mem {_i.InMemoryDataBaseName.ToUpper()} {Environment.NewLine} Are you sure?",
+                if (MessageBox.Show(
+                        $@"You choose to convert the database {_i.DatabaseName.ToUpper()} to In-Mem {_i.InMemoryDataBaseName.ToUpper()} {Environment.NewLine} Are you sure?",
                                     @"Question",
                                     MessageBoxButton.YesNo,
                                     MessageBoxImage.Question) == MessageBoxResult.No)
                 {
                     return;
                 }
-                if (CreateDatabase.Create(server, _i.InMemoryDataBaseName, ref error, _cnf.FileGroupName, _cnf.FileName, _cnf.MoPath) == false)
+                if (CreateDatabase.Create(server, _i.InMemoryDataBaseName, ref error, _cnf.FileGroupName, _cnf.FileName,
+                        _cnf.MoPath) == false)
                 {
                     MessageBox.Show(@"An error occurs while creating the database!",
                                     @"Error",

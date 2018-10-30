@@ -8,19 +8,18 @@ namespace Converter.Extension
     public static class UserDefinedTableTypesExtension
     {
         internal static string FName(this UserDefinedTableType self) =>
-            $"[{self.Parent.Name}].[{self.Schema}].[{self.Name}]";
+            $"{self.Parent.Name.BracketObjectName()}.{self.Schema.BracketObjectName()}.{self.Name.BracketObjectName()}";
 
         public static bool SwitchToMo(this UserDefinedTableType self,
                                       Database inMemDatabase, 
                                       Database traditional, 
-                                      Configuration.Configuration cnf, 
                                       ref string error, 
                                       ILog logger)
         {
 
 
 
-            bool hasPrimaryKey = false;
+            var hasPrimaryKey = false;
 
             if (inMemDatabase.UserDefinedTableTypes.Contains(self.Name,self.Schema))
             {

@@ -24,7 +24,6 @@ namespace Converter.Extension
         {
             var retValue = false;
             var schemaName = self.Schema;
-            var dataBaseName = self.Parent.Name;
 
             if (inMemDatabase.Schemas.Contains(schemaName) == false)
             {
@@ -340,7 +339,7 @@ namespace Converter.Extension
             if (c.Computed)
             {
                 newColumn.Computed = false;
-                newColumn.ComputedText = String.Empty;
+                newColumn.ComputedText = string.Empty;
                 //newColumn.IsPersisted = c.IsPersisted;
                 logger.LogWarErr("Warning " + (isTable ? c.FName() : c.UdtName()),
                                  $"Can not apply computed column {c.ComputedText}");

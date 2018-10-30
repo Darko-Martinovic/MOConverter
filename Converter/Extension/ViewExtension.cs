@@ -7,13 +7,11 @@ namespace Converter.Extension
 {
     public static class ViewExtension
     {
-        internal static string FName(this View self) => $"[{self.Parent.Name}].[{self.Schema}].[{self.Name}]";
+        private static string FName(this View self) => $"{self.Parent.Name.BracketObjectName()}.{self.Schema.BracketObjectName()}.{self.Name.BracketObjectName()}";
 
         public static bool SwitchToMo(
                                      this View self, 
                                      Database inMemDatabase, 
-                                     Database traditional,
-                                     Configuration.Configuration cnf, 
                                      ref string error, 
                                      ILog logger
             )

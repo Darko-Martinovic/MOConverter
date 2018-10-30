@@ -12,9 +12,7 @@ namespace Converter.Extension
 
         public static bool SwitchRelationsToMo(
                                                 this Table self,
-                                                Database inMemDatabase,
-                                                Database traditional,
-                                                Configuration.Configuration cnf, 
+                                                Database inMemDatabase, 
                                                 ref string error,
                                                 ILog logger
                                                 )

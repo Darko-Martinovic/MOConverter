@@ -4,22 +4,10 @@ using System.Reflection;
 
 namespace Converter.Extension
 {
-    //public enum SfcPropertyFlags
-    //{
-    //    None = 0,
-    //    Required = 16,
-    //    Expensive = 32,
-    //    Computed = 64,
-    //    Encrypted = 128,
-    //    ReadOnlyAfterCreation = 256,
-    //    Data = 512,
-    //    Standalone = 1024,
-    //    SqlAzureDatabase = 2048,
-    //    Design = 4096,
-    //    Deploy = 8192
-    //}
     public static class ObjectExtension
     {
+
+
         public static void CopyPropertiesFrom(this object self, object parent)
         {
             var fromProperties = parent.GetType().GetProperties();

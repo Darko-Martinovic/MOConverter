@@ -63,6 +63,7 @@
     <Compile Include="Extension\ExceptionExtension.cs" />
     <Compile Include="Extension\ObjectExtension.cs" />
     <Compile Include="Extension\StoredProcedureExtension.cs" />
+    <Compile Include="Extension\StringExtension.cs" />
     <Compile Include="Extension\Table extensions\TableExtension.cs" />
     <Compile Include="Extension\Table extensions\TableGenerateTSQLStatements.cs" />
     <Compile Include="Extension\Table extensions\TableNames.cs" />

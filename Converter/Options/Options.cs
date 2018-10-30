@@ -1,6 +1,4 @@
-﻿
-
-namespace Converter.Options
+﻿namespace Converter.Options
 {
     public class Options
     {
@@ -12,7 +10,9 @@ namespace Converter.Options
         }
         public bool CopyData { get; set; } = true;
         public IndexDecision UseHashIndexes { get; set; } = IndexDecision.Hash;
+/*
         public bool DropOnDestination { get; set; } = false;
+*/
         public string SchemaContains { get; set; } = string.Empty;
         public string TableContains { get; set; } = string.Empty;
     }

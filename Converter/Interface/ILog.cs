@@ -1,6 +1,4 @@
-﻿
-
-namespace Converter.Interface
+﻿namespace Converter.Interface
 {
     public interface ILog
     {

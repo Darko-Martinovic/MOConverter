@@ -95,7 +95,7 @@ namespace Converter.Extension
                 }
                 logger.SetValue(logger.CurrentItem);
                 var error = string.Empty;
-                if (tbl.SwitchRelationsToMo(dbInMemory, self, cnf, ref error, logger) == false)
+                if (tbl.SwitchRelationsToMo(dbInMemory, ref error, logger) == false)
                 {
                     logger.LogWarErr("RELATION:Error", error);
                 }
@@ -133,7 +133,7 @@ namespace Converter.Extension
                 }
                 logger.SetValue(logger.CurrentItem);
                 var error = string.Empty;
-                if (tbl.SwitchToMo(dbInMemory, self, cnf, ref error, logger) == false)
+                if (tbl.SwitchToMo(dbInMemory, self, ref error, logger) == false)
                 {
                     logger.LogWarErr("UDT:Error", error);
                 }
@@ -178,7 +178,7 @@ namespace Converter.Extension
                 logger.SetValue(logger.CurrentItem);
                 string error = string.Empty;
 
-                if (sp.SwitchToMo(dbInMemory, self, cnf, ref error, logger) == false)
+                if (sp.SwitchToMo(dbInMemory, ref error, logger) == false)
                     logger.LogWarErr("UDF:Error", error);
                 logger.CurrentItem++;
 
@@ -218,7 +218,7 @@ namespace Converter.Extension
                 logger.SetValue(logger.CurrentItem);
                 string error = string.Empty;
 
-                if (sp.SwitchToMo(dbInMemory, self, cnf, ref error, logger) == false)
+                if (sp.SwitchToMo(dbInMemory, ref error, logger) == false)
                 {
                     logger.LogWarErr("SP:Error", error);
                 }
@@ -261,7 +261,7 @@ namespace Converter.Extension
                 logger.SetValue(logger.CurrentItem);
                 string error = string.Empty;
 
-                if (sp.SwitchToMo(dbInMemory, self, cnf, ref error, logger) == false)
+                if (sp.SwitchToMo(dbInMemory, ref error, logger) == false)
                 {
                     logger.LogWarErr("VIEW:Error", error);
                 }
