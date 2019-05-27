@@ -18,50 +18,63 @@ namespace Converter.Extension
                                                 )
         {
 
-            foreach (ForeignKey fk in self.ForeignKeys)
+            Table inMemTable = inMemDatabase.Tables[self.Name, self.Schema];
+            if (inMemTable == null)
             {
-                if (inMemDatabase.Tables[self.Name, self.Schema].ForeignKeys.Contains(fk.Name))
-                {
-                    logger.Log("\t" + "Already exists", fk.Name);
-                    return true;
-                }
-                var newFk = new ForeignKey(inMemDatabase.Tables[self.Name, self.Schema], fk.Name);
-                newFk.CopyPropertiesFrom(fk);
-                newFk.IsMemoryOptimized = V;
-                foreach (ForeignKeyColumn fkc in fk.Columns)
-                {
-                    var newfkc = new ForeignKeyColumn(newFk, fkc.Name, fkc.ReferencedColumn);
-                    logger.Log("Relation", fk.Name);
-                    newFk.Columns.Add(newfkc);
-                }
-                if (newFk.DeleteAction == ForeignKeyAction.Cascade)
-                {
-                    newFk.DeleteAction = ForeignKeyAction.NoAction;
-                    logger.LogWarErr($"Warning {newFk.Name}",
-                        $" Delete action CASCADE is not supported {self.FName()}");
-                }
-                if (newFk.UpdateAction == ForeignKeyAction.Cascade)
-                {
-                    newFk.UpdateAction = ForeignKeyAction.NoAction;
-                    logger.LogWarErr($"Warning  {newFk.Name}",
-                        $" Update action CASCADE is not supported {self.FName()}");
-                }
-                try
-                {
-                    newFk.Create();
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    error = string.Join($"{Environment.NewLine}\t", ex.CollectThemAll(ex1 => ex1.InnerException)
-                                       .Select(ex1 => ex1.Message));
-                    logger.LogWarErr("Ralation Error", $"{newFk.Name} {error}");
-                    return false;
-                }
-
+                error = "\tIn-memory table " + self.Schema + "." + self.Name + " does not exists";
+                return false;
             }
 
-            return true;
+            foreach (ForeignKey fk in self.ForeignKeys)
+            {
+                if (inMemTable.ForeignKeys.Contains(fk.Name))
+                {
+                    logger.Log("\t" + "Already exists", fk.Name);
+                }
+                else
+                {
+                    var newFk = new ForeignKey(inMemDatabase.Tables[self.Name, self.Schema], fk.Name);
+                    newFk.CopyPropertiesFrom(fk);
+                    newFk.IsMemoryOptimized = V;
+                    foreach (ForeignKeyColumn fkc in fk.Columns)
+                    {
+                        var newfkc = new ForeignKeyColumn(newFk, fkc.Name, fkc.ReferencedColumn);
+                        logger.Log("Relation", fk.Name);
+                        newFk.Columns.Add(newfkc);
+                    }
+                    if (newFk.DeleteAction == ForeignKeyAction.Cascade)
+                    {
+                        newFk.DeleteAction = ForeignKeyAction.NoAction;
+                        logger.LogWarErr($"Warning {newFk.Name}",
+                            $" Delete action CASCADE is not supported {self.FName()}");
+                    }
+                    if (newFk.DeleteAction == ForeignKeyAction.SetNull)
+                    {
+                        newFk.DeleteAction = ForeignKeyAction.NoAction;
+                        logger.LogWarErr($"Warning  {newFk.Name}",
+                            $" Delete action SET NULL is not supported {self.FName()}");
+                    }
+                    if (newFk.UpdateAction == ForeignKeyAction.Cascade)
+                    {
+                        newFk.UpdateAction = ForeignKeyAction.NoAction;
+                        logger.LogWarErr($"Warning  {newFk.Name}",
+                            $" Update action CASCADE is not supported {self.FName()}");
+                    }
+
+                    try
+                    {
+                        newFk.Create();
+                    }
+                    catch (Exception ex)
+                    {
+                        error = string.Join($"{Environment.NewLine}\t", ex.CollectThemAll(ex1 => ex1.InnerException)
+                                           .Select(ex1 => ex1.Message));
+                        logger.LogWarErr("Ralation Error", $"{newFk.Name} {error}");
+                    }
+                }
+            }
+
+            return error == "";
 
         }
         

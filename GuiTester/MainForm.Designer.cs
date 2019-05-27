@@ -57,8 +57,8 @@
             this.chkCopyData = new System.Windows.Forms.CheckBox();
             this.label9 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
-            this.txtTableContains = new System.Windows.Forms.TextBox();
-            this.txtSchema = new System.Windows.Forms.TextBox();
+            this.txtTables = new System.Windows.Forms.TextBox();
+            this.txtSchemas = new System.Windows.Forms.TextBox();
             this.Timer1 = new System.Windows.Forms.Timer(this.components);
             this.label7 = new System.Windows.Forms.Label();
             this.lblOveral = new System.Windows.Forms.Label();
@@ -299,8 +299,8 @@
             this.grpOptions.Controls.Add(this.chkCopyData);
             this.grpOptions.Controls.Add(this.label9);
             this.grpOptions.Controls.Add(this.label8);
-            this.grpOptions.Controls.Add(this.txtTableContains);
-            this.grpOptions.Controls.Add(this.txtSchema);
+            this.grpOptions.Controls.Add(this.txtTables);
+            this.grpOptions.Controls.Add(this.txtSchemas);
             this.grpOptions.Location = new System.Drawing.Point(300, 12);
             this.grpOptions.Name = "grpOptions";
             this.grpOptions.Size = new System.Drawing.Size(299, 315);
@@ -371,36 +371,36 @@
             this.label9.AutoSize = true;
             this.label9.Location = new System.Drawing.Point(7, 235);
             this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(83, 13);
+            this.label9.Size = new System.Drawing.Size(148, 13);
             this.label9.TabIndex = 45;
-            this.label9.Text = "Table contains :";
+            this.label9.Text = "Table list (comma separated) :";
             // 
             // label8
             // 
             this.label8.AutoSize = true;
             this.label8.Location = new System.Drawing.Point(7, 196);
             this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(95, 13);
+            this.label8.Size = new System.Drawing.Size(160, 13);
             this.label8.TabIndex = 45;
-            this.label8.Text = "Schema contains :";
+            this.label8.Text = "Schema list (comma separated) :";
             // 
-            // txtTableContains
+            // txtTables
             // 
-            this.txtTableContains.BackColor = System.Drawing.SystemColors.Control;
-            this.txtTableContains.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.txtTableContains.Location = new System.Drawing.Point(10, 251);
-            this.txtTableContains.Name = "txtTableContains";
-            this.txtTableContains.Size = new System.Drawing.Size(247, 20);
-            this.txtTableContains.TabIndex = 50;
+            this.txtTables.BackColor = System.Drawing.SystemColors.Control;
+            this.txtTables.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.txtTables.Location = new System.Drawing.Point(10, 251);
+            this.txtTables.Name = "txtTables";
+            this.txtTables.Size = new System.Drawing.Size(247, 20);
+            this.txtTables.TabIndex = 50;
             // 
-            // txtSchema
+            // txtSchemas
             // 
-            this.txtSchema.BackColor = System.Drawing.SystemColors.Control;
-            this.txtSchema.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.txtSchema.Location = new System.Drawing.Point(10, 212);
-            this.txtSchema.Name = "txtSchema";
-            this.txtSchema.Size = new System.Drawing.Size(247, 20);
-            this.txtSchema.TabIndex = 50;
+            this.txtSchemas.BackColor = System.Drawing.SystemColors.Control;
+            this.txtSchemas.Font = new System.Drawing.Font("Microsoft Sans Serif", 8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.txtSchemas.Location = new System.Drawing.Point(10, 212);
+            this.txtSchemas.Name = "txtSchemas";
+            this.txtSchemas.Size = new System.Drawing.Size(247, 20);
+            this.txtSchemas.TabIndex = 50;
             // 
             // Timer1
             // 
@@ -482,8 +482,8 @@
         private System.Windows.Forms.CheckBox chkCopyData;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.Label label8;
-        private System.Windows.Forms.TextBox txtTableContains;
-        private System.Windows.Forms.TextBox txtSchema;
+        private System.Windows.Forms.TextBox txtTables;
+        private System.Windows.Forms.TextBox txtSchemas;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.RadioButton rbExtendedProperies;
         private System.Windows.Forms.RadioButton rbRange;
