@@ -310,8 +310,19 @@ namespace WPFTester
                 enumFeatures = SqlServerMoFeatures.SqlServer2017;
             }
 
-            _o.Schemas.AddRange(txtSchemas.Text.Trim().Split(','));
-            _o.Tables.AddRange(txtTables.Text.Trim().Split(','));
+            string[] arr = txtSchemas.Text.Trim().Split(',');
+            foreach (string s in arr)
+            {
+                if (s != "")
+                    _o.Schemas.Add(s);
+            }
+
+            arr = txtTables.Text.Trim().Split(',');
+            foreach (string s in arr)
+            {
+                if (s != "")
+                    _o.Tables.Add(s);
+            }
 
             _success = db.SwitchToMo(
                                     dbInMemory,
