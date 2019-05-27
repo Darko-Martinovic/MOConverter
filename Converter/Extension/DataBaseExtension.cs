@@ -43,13 +43,13 @@ namespace Converter.Extension
             {
 
 
-                if (o.SchemaContains.Equals(string.Empty) == false && tbl.Schema.Contains(o.SchemaContains) == false)
+                if (o.Schemas.Count > 0 && !o.Schemas.Contains(tbl.Schema))
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);
                     continue;
                 }
-                if (string.Empty.Equals(o.TableContains) == false && tbl.Name.Contains(o.TableContains) == false)
+                if (o.Tables.Count > 0 && !o.Tables.Contains(tbl.Name))
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);
@@ -81,13 +81,13 @@ namespace Converter.Extension
             foreach (Table tbl in tables)
             {
 
-                if (o.SchemaContains.Equals(string.Empty) == false && tbl.Schema.Contains(o.SchemaContains) == false)
+                if (o.Schemas.Count > 0 && !o.Schemas.Contains(tbl.Schema))
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);
                     continue;
                 }
-                if (o.TableContains.Equals(string.Empty) == false && tbl.Name.Contains(o.TableContains) == false)
+                if (o.Tables.Count > 0 && !o.Tables.Contains(tbl.Name))
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);
@@ -119,13 +119,13 @@ namespace Converter.Extension
             foreach (UserDefinedTableType tbl in udtts)
             {
 
-                if (o.SchemaContains.Equals(string.Empty) == false && tbl.Schema.Contains(o.SchemaContains) == false)
+                if (o.Schemas.Count > 0 && !o.Schemas.Contains(tbl.Schema))
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);
                     continue;
                 }
-                if (o.TableContains.Equals(string.Empty) == false && tbl.Name.Contains(o.TableContains) == false)
+                if (o.Tables.Count > 0 && !o.Tables.Contains(tbl.Name))
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);
@@ -168,7 +168,7 @@ namespace Converter.Extension
                     logger.SetValue(logger.CurrentItem);
                     continue;
                 }
-                if (o.SchemaContains.Equals(string.Empty) == false && sp.Schema.Contains(o.SchemaContains) == false)
+                if (o.Schemas.Count > 0 && !o.Schemas.Contains(sp.Schema))
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);
@@ -199,7 +199,6 @@ namespace Converter.Extension
             logger.SetMaxValue(logger.Counter);
 
             
-            
             foreach (StoredProcedure sp in sps)
             {
                 if (sp.IsSystemObject)
@@ -208,7 +207,7 @@ namespace Converter.Extension
                     logger.SetValue(logger.CurrentItem);
                     continue;
                 }
-                if (o.SchemaContains.Equals(string.Empty) == false && sp.Schema.Contains(o.SchemaContains) == false)
+                if (o.Schemas.Count > 0 && !o.Schemas.Contains(sp.Schema))
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);
@@ -251,7 +250,7 @@ namespace Converter.Extension
                     logger.SetValue(logger.CurrentItem);
                     continue;
                 }
-                if (o.SchemaContains.Equals(string.Empty) == false && sp.Schema.Contains(o.SchemaContains) == false)
+                if (o.Schemas.Count > 0 && !o.Schemas.Contains(sp.Schema))
                 {
                     logger.CurrentItem++;
                     logger.SetValue(logger.CurrentItem);

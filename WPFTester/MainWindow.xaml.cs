@@ -103,9 +103,7 @@ namespace WPFTester
             //create options
             _o = new Options
             {
-                CopyData = chkCopyData.IsChecked == true,
-                TableContains = txtTable.Text.Trim(),
-                SchemaContains = txtSchema.Text.Trim()
+                CopyData = chkCopyData.IsChecked == true
             };
 
 
@@ -311,6 +309,10 @@ namespace WPFTester
             {
                 enumFeatures = SqlServerMoFeatures.SqlServer2017;
             }
+
+            _o.Schemas.AddRange(txtSchemas.Text.Trim().Split(','));
+            _o.Tables.AddRange(txtTables.Text.Trim().Split(','));
+
             _success = db.SwitchToMo(
                                     dbInMemory,
                                     this,
@@ -733,8 +735,8 @@ namespace WPFTester
             cmbAuth.IsEnabled = v;
             cmbDatabase.IsEnabled = v;
             cmbDestination.IsEnabled = v;
-            txtSchema.IsEnabled = v;
-            txtTable.IsEnabled = v;
+            txtSchemas.IsEnabled = v;
+            txtTables.IsEnabled = v;
             cmbIndexOptions.IsEnabled = v;
             chkCopyData.IsEnabled = v;
             chkNewDatabase.IsEnabled = v;

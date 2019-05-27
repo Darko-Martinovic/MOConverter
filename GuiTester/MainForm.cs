@@ -13,6 +13,7 @@ using System.Diagnostics;
 using Converter.Inputs;
 using Converter.DataAccess;
 using Converter.Enums;
+using System.Collections.Generic;
 // ReSharper disable RedundantAssignment
 
 namespace GuiTester
@@ -108,8 +109,8 @@ namespace GuiTester
                 _o.UseHashIndexes = Options.IndexDecision.ExtendedPropery;
 
             //o.DropOnDestination = chkDropOnDestination.Checked;
-            _o.SchemaContains = txtSchema.Text.Trim();
-            _o.TableContains = txtTableContains.Text.Trim();
+            _o.Schemas.AddRange(txtSchemas.Text.Trim().Split(','));
+            _o.Tables.AddRange(txtTables.Text.Trim().Split(','));
 
             Server server;
             try

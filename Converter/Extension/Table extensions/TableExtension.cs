@@ -22,7 +22,6 @@ namespace Converter.Extension
                                       ILog logger,
                                       SqlServerMoFeatures enumFeatures)
         {
-            var retValue = false;
             var schemaName = self.Schema;
 
             if (inMemDatabase.Schemas.Contains(schemaName) == false)
@@ -130,6 +129,7 @@ namespace Converter.Extension
                         IndexType = IndexType.NonClusteredIndex,
                         IndexKeyType = IndexKeyType.None
                     };
+                    idx.IsUnique = i.IsUnique;
 
                     bool hasColumns = false;
                     foreach (IndexedColumn ic in i.IndexedColumns)
@@ -221,7 +221,6 @@ namespace Converter.Extension
                     var test = inMemDatabase.Tables[cnf.HelperTableName, cnf.HelperSchema];
                     inMemDatabase.ExecuteNonQuery(newTable.FullInsertStm(test.SelectStm(), hasIdentities,
                         cnf.FullName));
-                    retValue = true;
                     logger.Log("OK ", newTable.FName());
                     //
                 }
@@ -239,15 +238,13 @@ namespace Converter.Extension
                     if (Debugger.IsAttached)
                         Debugger.Break();
 
-
-                    return false;
                 }
             }
 
 
             newTable = null;
 
-            return retValue;
+            return error == "";
         }
 
         public static void SupportUnsupported(

@@ -1,4 +1,6 @@
-﻿namespace Converter.Options
+﻿using System.Collections.Generic;
+
+namespace Converter.Options
 {
     public class Options
     {
@@ -13,7 +15,7 @@
 /*
         public bool DropOnDestination { get; set; } = false;
 */
-        public string SchemaContains { get; set; } = string.Empty;
-        public string TableContains { get; set; } = string.Empty;
+        public List<string> Schemas { get; set; } = new List<string>();
+        public List<string> Tables { get; set; } = new List<string>();
     }
 }
