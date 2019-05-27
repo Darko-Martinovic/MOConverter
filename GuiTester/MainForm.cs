@@ -109,9 +109,20 @@ namespace GuiTester
                 _o.UseHashIndexes = Options.IndexDecision.ExtendedPropery;
 
             //o.DropOnDestination = chkDropOnDestination.Checked;
-            _o.Schemas.AddRange(txtSchemas.Text.Trim().Split(','));
-            _o.Tables.AddRange(txtTables.Text.Trim().Split(','));
+            string[] arr = txtSchemas.Text.Trim().Split(',');
+            foreach (string s in arr)
+            {
+                if (s != "")
+                    _o.Schemas.Add(s);
+            }
 
+            arr = txtTables.Text.Trim().Split(',');
+            foreach (string s in arr)
+            {
+                if (s != "")
+                    _o.Tables.Add(s);
+            }
+            
             Server server;
             try
             {
@@ -430,12 +441,11 @@ namespace GuiTester
             SetTextDescription(txt);
 
         }
-        private StringBuilder _sb;
+        private StringBuilder _sb = new StringBuilder();
         void ILog.LogWarErr(string text, string txt)
         {
-            if (_sb == null)
+            if (_sb.Length == 0)
             {
-                _sb = new StringBuilder();
                 _sb.Append(
                     $"****Summary report - converting  {_i.DatabaseName} to IN-MEM OLTP {_i.InMemoryDataBaseName} on server {_i.ServerName}\r\n");
                 _sb.Append("\r\n");
