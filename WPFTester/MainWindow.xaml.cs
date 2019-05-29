@@ -122,6 +122,21 @@ namespace WPFTester
 
             //_o.DropOnDestination = chkDropOnDestination.Checked;
 
+            var arr = txtSchemas.Text.Trim().Split(',');
+            foreach (var s in arr)
+            {
+                if (s != "")
+                    _o.Schemas.Add(s.ToLower());
+            }
+
+            arr = txtTables.Text.Trim().Split(',');
+            foreach (var s in arr)
+            {
+                if (s != "")
+                    _o.Tables.Add(s.ToLower());
+            }
+
+
             Server server;
             try
             {
@@ -310,19 +325,6 @@ namespace WPFTester
                 enumFeatures = SqlServerMoFeatures.SqlServer2017;
             }
 
-            string[] arr = txtSchemas.Text.Trim().Split(',');
-            foreach (string s in arr)
-            {
-                if (s != "")
-                    _o.Schemas.Add(s);
-            }
-
-            arr = txtTables.Text.Trim().Split(',');
-            foreach (string s in arr)
-            {
-                if (s != "")
-                    _o.Tables.Add(s);
-            }
 
             _success = db.SwitchToMo(
                                     dbInMemory,
@@ -577,10 +579,12 @@ namespace WPFTester
 
             if (_isAborted == false)
             {
-                var fileName = _i.DatabaseName + DateTime.Now.ToString("yyyy_mm_dd_HH_mm_ss") + ".txt";
+                var fileName = $"{_i.DatabaseName}{DateTime.Now:yyyy_mm_dd_HH_mm_ss}.txt";
+
                 if (File.Exists(fileName))
                     File.Delete(fileName);
-                File.WriteAllText(fileName, _sb.ToString());
+
+                File.WriteAllText(fileName, _sb?.ToString());
                 // start notepad and disply the configuration
                 Process.Start(fileName);
             }

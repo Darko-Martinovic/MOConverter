@@ -109,15 +109,15 @@ namespace GuiTester
                 _o.UseHashIndexes = Options.IndexDecision.ExtendedPropery;
 
             //o.DropOnDestination = chkDropOnDestination.Checked;
-            string[] arr = txtSchemas.Text.Trim().Split(',');
-            foreach (string s in arr)
+            var arr = txtSchemas.Text.Trim().Split(',');
+            foreach (var s in arr)
             {
                 if (s != "")
                     _o.Schemas.Add(s);
             }
 
             arr = txtTables.Text.Trim().Split(',');
-            foreach (string s in arr)
+            foreach (var s in arr)
             {
                 if (s != "")
                     _o.Tables.Add(s);
@@ -139,11 +139,11 @@ namespace GuiTester
                                 MessageBoxIcon.Error);
                 return;
             }
-            bool isSysAdmin = ((int)DataAccess.ExecuteScalar(DataAccess.GetConnectionString(
+            var isSysAdmin = ((int)DataAccess.ExecuteScalar(DataAccess.GetConnectionString(
                     txtServer.Text,
                     "master",
                     cmbAuth.SelectedIndex == 0 ,
-                    txtUserName.Text, txtPassword.Text), $@" SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1) ;
+                    txtUserName.Text, txtPassword.Text), @" SELECT IS_SRVROLEMEMBER ('sysadmin') ") == 1) ;
 
             if ( isSysAdmin== false)
             {

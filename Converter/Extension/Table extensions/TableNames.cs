@@ -14,5 +14,12 @@ namespace Converter.Extension
         public static string FName(this Table self) =>
             $"{self.Parent.Name.BracketObjectName()}.{self.Schema.BracketObjectName()}.{self.Name.BracketObjectName()}";
 
+        public static string LName(this Table self) =>
+            $"{self.Name.ToLower()}";
+
+        public static string SchemaLName(this Table self) =>
+            $"{self.Schema.ToLower()}";
+
+
     }
 }

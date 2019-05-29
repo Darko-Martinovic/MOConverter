@@ -21,7 +21,7 @@ namespace Converter.Extension
             Table inMemTable = inMemDatabase.Tables[self.Name, self.Schema];
             if (inMemTable == null)
             {
-                error = "\tIn-memory table " + self.Schema + "." + self.Name + " does not exists";
+                error = $"\tIn-memory table {self.Schema}.{self.Name} does not exists";
                 return false;
             }
 
@@ -29,7 +29,7 @@ namespace Converter.Extension
             {
                 if (inMemTable.ForeignKeys.Contains(fk.Name))
                 {
-                    logger.Log("\t" + "Already exists", fk.Name);
+                    logger.Log("\tAlready exists", fk.Name);
                 }
                 else
                 {
