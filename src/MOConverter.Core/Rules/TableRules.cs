@@ -11,7 +11,22 @@ public static class TableRules
             .Concat(Indexes(table))
             .Concat(table.Checks.SelectMany(c => Check(table.Name, c)))
             .Concat(foreignKeys.Where(k => k.Table == table.Name).SelectMany(ForeignKey))
-            .Concat(table.Triggers.Select(Trigger));
+            .Concat(table.Triggers.Select(Trigger))
+            .Concat(RowLength(table));
+
+    private static IEnumerable<Finding> RowLength(TableInfo table)
+    {
+        // Only for a table that has a primary key; one without is blocked already
+        if (!table.Indexes.Any(i => i.IsPrimaryKey) || table.Columns.Any(c => !c.IsComputed && TypeMap.Map(c).Rule == RuleCatalogue.TypeUnsupported))
+            yield break;
+
+        var bytes = Limits.InRowBytes(table);
+        if (bytes > Limits.MaxInRowBytes)
+        {
+            yield return new(RuleCatalogue.RowTooLong,
+                $"what must stay in its rows takes {bytes} bytes, more than {Limits.MaxInRowBytes}: fixed-size columns and the variable ones in index keys can't move off-row");
+        }
+    }
 
     private static IEnumerable<Finding> TableKind(TableInfo table)
     {
@@ -213,11 +228,21 @@ public static class TableRules
             yield return new(RuleCatalogue.CheckUnsupported,
                 $"check constraint {name} {check.Definition} uses {Expressions.Describe(unsupported)}, and is left out");
         }
+        else if (check.IsNotForReplication)
+        {
+            yield return new(RuleCatalogue.Untrusted, NotForReplication("check constraint", table, check.Name));
+        }
         else if (check.IsNotTrusted)
         {
             yield return new(RuleCatalogue.Untrusted, Untrusted("check constraint", table, check.Name));
         }
     }
+
+    // SQL Server keeps such a constraint untrusted whatever the rows, and replication may have let
+    // in rows that break it; memory-optimized tables don't have NOT FOR REPLICATION at all
+    private static string NotForReplication(string what, ObjectName table, string name) =>
+        $"{what} {ObjectName.Quote(name)} is NOT FOR REPLICATION, which memory-optimized tables don't support, and its rows aren't vouched for: "
+        + $"check them with DBCC CHECKCONSTRAINTS ('{table.ToString().Replace("'", "''")}'), then recreate it without NOT FOR REPLICATION";
 
     private static string Untrusted(string what, ObjectName table, string name) =>
         $"{what} {ObjectName.Quote(name)} was made WITH NOCHECK, so rows may break it: check them with "
@@ -234,7 +259,9 @@ public static class TableRules
 
         if (!key.ReferencesPrimaryKey)
             yield return new(RuleCatalogue.ForeignKeyTarget, $"foreign key {name} references a unique key of {key.Referenced}, not its primary key");
-        if (key.IsNotTrusted)
+        if (key.IsNotForReplication)
+            yield return new(RuleCatalogue.Untrusted, NotForReplication("foreign key", key.Table, key.Name));
+        else if (key.IsNotTrusted)
             yield return new(RuleCatalogue.Untrusted, Untrusted("foreign key", key.Table, key.Name));
 
         var actions = new[] { ("ON DELETE", key.DeleteAction), ("ON UPDATE", key.UpdateAction) }

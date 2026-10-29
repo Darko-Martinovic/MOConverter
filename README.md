@@ -152,7 +152,7 @@ Each table gets the worst outcome among its findings:
 | ready | Converts as it is. |
 | fixed | The tool changes something, and the data and query results stay the same. For example, an alias type becomes its base type, `text` becomes `varchar(max)`, a UTF-8 `varchar` becomes `nvarchar`, or a clustered index becomes nonclustered. A filter or INCLUDE is dropped from an index. An index or columnstore index memory-optimized tables can't hold is left out. A primary key too wide for a range index becomes a hash index. |
 | lossy | Converts with a change in meaning, which `--accept-lossy` has to allow. For example, `datetimeoffset` loses its offset, `xml` and the spatial types lose their methods, or a CASCADE foreign key becomes NO ACTION. A check or default SQL Server refuses, a trigger, or a unique key too wide to keep is left out. A computed column reads a column whose type changes. |
-| blocked | Can't be converted until something changes. For example, the table has no primary key (or a disabled one), uses `sql_variant`, or has a unique filtered index. It is a temporal, ledger or graph table. A foreign key references a unique key rather than the primary key, or links the table to one that won't be in the new database. A key or check was made `WITH NOCHECK`, so rows may break it. A definition is hidden from the login, or there is more data than memory. |
+| blocked | Can't be converted until something changes. For example, the table has no primary key (or a disabled one), uses `sql_variant`, or has a unique filtered index. It is a temporal, ledger or graph table. A foreign key references a unique key rather than the primary key, or links the table to one that won't be in the new database. A key or check was made `WITH NOCHECK` or `NOT FOR REPLICATION`, so rows may break it. What must stay in a row passes 8060 bytes. A definition is hidden from the login, or there is more data than memory. |
 
 For example (a few of the test tables, cut to fit):
 
@@ -204,7 +204,8 @@ Every rule the assessment applies, worst outcome first. `moconverter rules` prin
 | `foreign-key-boundary` | blocked | A foreign key links the table to one that won't be in the new database: not selected, blocked, or memory-optimized already. |
 | `foreign-key-target` | blocked | A foreign key references a unique key: between memory-optimized tables, it must reference the primary key. |
 | `max-key` | blocked | A primary key is too wide even for a hash index: a column becomes max, as a UTF-8 varchar over 4000 does, or the key passes 8060 bytes. |
-| `untrusted` | blocked | A foreign key or check made WITH NOCHECK may have rows that break it, and the memory-optimized copy checks every row. |
+| `row-too-long` | blocked | What must stay in a row (fixed-size columns and index keys) passes 8060 bytes. |
+| `untrusted` | blocked | A foreign key or check made WITH NOCHECK or NOT FOR REPLICATION may have rows that break it, and the memory-optimized copy checks every row. |
 | `definition-hidden` | blocked | A definition isn't visible to this login: it needs VIEW DEFINITION. |
 | `type-lossy` | lossy | A column's type is stored as another type, and loses its methods or part of its value. |
 | `check-unsupported` | lossy | A check constraint uses something memory-optimized tables don't accept, and is left out. |

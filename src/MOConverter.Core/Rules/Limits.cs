@@ -55,6 +55,39 @@ public static class Limits
             + 2 * ((nullable + 7) / 8);
     }
 
+    /// <summary>The most the in-row part of a row can take.</summary>
+    public const int MaxInRowBytes = 8060;
+
+    /// <summary>
+    /// What must stay in the row, against 8060 bytes: 8 bytes; every fixed-size column as it is
+    /// stored; every variable column of an index key whole, with 2 bytes; any other variable
+    /// column whole with 2 bytes (at least 7) up to 24 bytes, and 8 bytes beyond, as SQL Server
+    /// moves those off-row; and 2 bytes for each 8 nullable columns. Measured at the boundary, and
+    /// checked by ServerAgreesTests.
+    /// </summary>
+    public static int InRowBytes(TableInfo table)
+    {
+        var keyed = KeptIndexes(table).SelectMany(i => i.Keys).Select(k => k.Name).ToHashSet(StringComparer.Ordinal);
+        var columns = table.Columns.Where(c => !c.IsComputed || c.IsPersisted || keyed.Contains(c.Name)).ToList();
+        var nullable = columns.Count(c => IsNullable(table, c));
+        return 8
+            + columns.Sum(c =>
+            {
+                if (!IsVariable(c))
+                    return StoredBytes(c);
+                var bytes = ColumnBytes(c);
+                if (keyed.Contains(c.Name))
+                    return bytes + 2;
+                return bytes is >= 0 and <= 24 ? Math.Max(bytes + 2, 7) : 8;
+            })
+            + 2 * ((nullable + 7) / 8);
+    }
+
+    /// <summary>The indexes the memory-optimized table keeps whose keys must stay in the row.</summary>
+    public static IEnumerable<IndexInfo> KeptIndexes(TableInfo table) =>
+        table.Indexes.Where(i => !i.IsDisabled && i.Kind is "CLUSTERED" or "NONCLUSTERED"
+            && (i.IsPrimaryKey || KeyBytes(table, i) <= MaxKeyBytes));
+
     /// <summary>
     /// Whether the memory-optimized column allows NULL: as in the source, but for a rowversion
     /// outside the primary key, whose binary(8) nothing fills in.

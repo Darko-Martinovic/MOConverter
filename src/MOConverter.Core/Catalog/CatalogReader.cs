@@ -88,12 +88,12 @@ public static class CatalogReader
                 index.Keys.Add(new IndexColumn(reader.GetString(2), reader.GetBoolean(3)));
         }
 
-        var keys = new Dictionary<int, (string Name, int Table, int Referenced, string Delete, string Update, bool Disabled, bool ToPrimaryKey, bool NotTrusted, List<(string, string)> Columns)>();
+        var keys = new Dictionary<int, (string Name, int Table, int Referenced, string Delete, string Update, bool Disabled, bool ToPrimaryKey, bool NotTrusted, bool NotForReplication, List<(string, string)> Columns)>();
         await reader.NextResultAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             keys[reader.GetInt32(0)] = (reader.GetString(1), reader.GetInt32(2), reader.GetInt32(3),
-                reader.GetString(4), reader.GetString(5), reader.GetBoolean(6), reader.GetInt32(7) == 1, reader.GetBoolean(8), []);
+                reader.GetString(4), reader.GetString(5), reader.GetBoolean(6), reader.GetInt32(7) == 1, reader.GetBoolean(8), reader.GetBoolean(9), []);
         }
 
         await reader.NextResultAsync(cancellationToken);
@@ -103,14 +103,14 @@ public static class CatalogReader
         foreach (var key in keys.Values)
         {
             foreignKeys.Add(new ForeignKeyInfo(key.Name, tables[key.Table].Name, tables[key.Referenced].Name,
-                key.Delete, key.Update, key.Disabled, key.ToPrimaryKey, key.Columns, key.NotTrusted));
+                key.Delete, key.Update, key.Disabled, key.ToPrimaryKey, key.Columns, key.NotTrusted, key.NotForReplication));
         }
 
         await reader.NextResultAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             // A null definition means it isn't visible to this login
-            tables[reader.GetInt32(0)].Checks.Add(new CheckInfo(reader.GetString(1), NullableString(reader, 2) ?? "", reader.GetBoolean(3), reader.GetBoolean(4)));
+            tables[reader.GetInt32(0)].Checks.Add(new CheckInfo(reader.GetString(1), NullableString(reader, 2) ?? "", reader.GetBoolean(3), reader.GetBoolean(4), reader.GetBoolean(5)));
         }
 
         await reader.NextResultAsync(cancellationToken);
@@ -237,8 +237,7 @@ public static class CatalogReader
                CASE WHEN EXISTS (SELECT 1 FROM sys.indexes ri
                                  WHERE ri.object_id = fk.referenced_object_id AND ri.index_id = fk.key_index_id AND ri.is_primary_key = 1)
                     THEN 1 ELSE 0 END,
-               -- NOT FOR REPLICATION keeps a constraint untrusted for good, rows or not: not a sign of bad rows
-               CAST(CASE WHEN fk.is_not_trusted = 1 AND fk.is_not_for_replication = 0 THEN 1 ELSE 0 END AS bit)
+               fk.is_not_trusted, fk.is_not_for_replication
         FROM sys.foreign_keys fk
         JOIN sys.tables t ON t.object_id = fk.parent_object_id AND t.is_ms_shipped = 0;
 
@@ -250,7 +249,7 @@ public static class CatalogReader
         ORDER BY fkc.constraint_object_id, fkc.constraint_column_id;
 
         SELECT cc.parent_object_id, cc.name, cc.definition, cc.is_disabled,
-               CAST(CASE WHEN cc.is_not_trusted = 1 AND cc.is_not_for_replication = 0 THEN 1 ELSE 0 END AS bit)
+               cc.is_not_trusted, cc.is_not_for_replication
         FROM sys.check_constraints cc
         JOIN sys.tables t ON t.object_id = cc.parent_object_id AND t.is_ms_shipped = 0
         ORDER BY cc.parent_object_id, cc.name;

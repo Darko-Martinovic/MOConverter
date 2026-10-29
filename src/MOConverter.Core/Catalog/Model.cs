@@ -79,7 +79,7 @@ public sealed record IndexInfo(
 
 /// <param name="DeleteAction">sys.foreign_keys' action: NO_ACTION, CASCADE, SET_NULL or SET_DEFAULT.</param>
 /// <param name="ReferencesPrimaryKey">False when the key references a unique constraint or index instead.</param>
-/// <param name="IsNotTrusted">Made or re-enabled WITH NOCHECK, so rows may break it; true for a disabled one too, false for NOT FOR REPLICATION.</param>
+/// <param name="IsNotTrusted">Made or re-enabled WITH NOCHECK, so rows may break it; true for a disabled one too, and always for NOT FOR REPLICATION.</param>
 public sealed record ForeignKeyInfo(
     string Name,
     ObjectName Table,
@@ -89,10 +89,11 @@ public sealed record ForeignKeyInfo(
     bool IsDisabled,
     bool ReferencesPrimaryKey,
     IReadOnlyList<(string Column, string Referenced)> Columns,
-    bool IsNotTrusted = false);
+    bool IsNotTrusted = false,
+    bool IsNotForReplication = false);
 
-/// <param name="IsNotTrusted">Made or re-enabled WITH NOCHECK, so rows may break it; true for a disabled one too, false for NOT FOR REPLICATION.</param>
-public sealed record CheckInfo(string Name, string Definition, bool IsDisabled, bool IsNotTrusted = false);
+/// <param name="IsNotTrusted">Made or re-enabled WITH NOCHECK, so rows may break it; true for a disabled one too, and always for NOT FOR REPLICATION.</param>
+public sealed record CheckInfo(string Name, string Definition, bool IsDisabled, bool IsNotTrusted = false, bool IsNotForReplication = false);
 
 public sealed record TriggerInfo(string Name, bool IsInsteadOf, bool IsDisabled);
 
