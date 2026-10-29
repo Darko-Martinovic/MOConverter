@@ -34,7 +34,8 @@ public static class CatalogReader
                 Rows = reader.GetInt64(12),
                 DataBytes = reader.GetInt64(13),
                 IsPartitioned = reader.GetInt32(14) > 1,
-                Compression = reader.IsDBNull(15) ? null : reader.GetString(15),
+                Compression = NullableString(reader, 15),
+                PrimaryKeyHint = NullableString(reader, 16),
             };
         }
 
@@ -61,7 +62,8 @@ public static class CatalogReader
                 IsSparse: reader.GetBoolean(17),
                 IsColumnSet: reader.GetBoolean(18),
                 DefaultName: NullableString(reader, 19),
-                DefaultDefinition: NullableString(reader, 20)));
+                DefaultDefinition: NullableString(reader, 20),
+                Collation: NullableString(reader, 21)));
         }
 
         var indexes = new Dictionary<(int, int), IndexBuilder>();
@@ -130,7 +132,8 @@ public static class CatalogReader
                    DB_NAME(),
                    (SELECT CAST(compatibility_level AS int) FROM sys.databases WHERE database_id = DB_ID()),
                    CASE WHEN EXISTS (SELECT 1 FROM sys.filegroups WHERE type = 'FX') THEN 1 ELSE 0 END,
-                   CASE WHEN COL_LENGTH('sys.tables', 'ledger_type') IS NULL THEN 0 ELSE 1 END;
+                   CASE WHEN COL_LENGTH('sys.tables', 'ledger_type') IS NULL THEN 0 ELSE 1 END,
+                   CAST(DATABASEPROPERTYEX(DB_NAME(), 'Collation') AS nvarchar(128));
             """;
 
         ServerFacts facts;
@@ -150,7 +153,8 @@ public static class CatalogReader
                 CompatibilityLevel: reader.GetInt32(7),
                 HasMemoryOptimizedFilegroup: reader.GetInt32(8) == 1,
                 MemoryLimitBytes: null,
-                MemoryLimitSource: "");
+                MemoryLimitSource: "",
+                DatabaseCollation: NullableString(reader, 10) ?? "");
             hasLedger = reader.GetInt32(9) == 1;
         }
 
@@ -179,7 +183,9 @@ public static class CatalogReader
                CASE WHEN ct.object_id IS NULL THEN 0 ELSE 1 END,
                t.is_tracked_by_cdc,
                CASE WHEN EXISTS (SELECT 1 FROM sys.fulltext_indexes fi WHERE fi.object_id = t.object_id) THEN 1 ELSE 0 END,
-               ISNULL(p.rows, 0), ISNULL(p.pages, 0) * 8192, ISNULL(p.partitions, 0), p.compression
+               ISNULL(p.rows, 0), ISNULL(p.pages, 0) * 8192, ISNULL(p.partitions, 0), p.compression,
+               (SELECT CONVERT(nvarchar(100), ep.value) FROM sys.extended_properties ep
+                WHERE ep.class = 1 AND ep.major_id = t.object_id AND ep.minor_id = 0 AND ep.name = N'MOIndexEp')
         FROM sys.tables t
         JOIN sys.schemas s ON s.schema_id = t.schema_id
         LEFT JOIN sys.change_tracking_tables ct ON ct.object_id = t.object_id
@@ -200,7 +206,7 @@ public static class CatalogReader
                c.max_length, c.precision, c.scale, c.is_nullable, c.is_identity,
                CONVERT(nvarchar(40), ic.seed_value), CONVERT(nvarchar(40), ic.increment_value),
                c.is_computed, cc.definition, ISNULL(cc.is_persisted, 0), c.is_sparse, c.is_column_set,
-               dc.name, dc.definition
+               dc.name, dc.definition, c.collation_name
         FROM sys.columns c
         JOIN sys.tables t ON t.object_id = c.object_id AND t.is_ms_shipped = 0
         JOIN sys.types ty ON ty.user_type_id = c.user_type_id
@@ -276,11 +282,12 @@ public static class CatalogReader
         public bool IsChangeTracked { get; init; }
         public bool IsTrackedByCdc { get; init; }
         public bool HasFullTextIndex { get; init; }
+        public string? PrimaryKeyHint { get; init; }
 
         public TableInfo Build() => new(
             Name, Rows, DataBytes, Columns, Indexes.Select(i => i.Build()).ToList(), Checks, Triggers,
             IsMemoryOptimized, IsPartitioned, Compression, TemporalType, LedgerType, IsGraphTable,
-            IsFileTable, IsReplicated, IsChangeTracked, IsTrackedByCdc, HasFullTextIndex);
+            IsFileTable, IsReplicated, IsChangeTracked, IsTrackedByCdc, HasFullTextIndex, PrimaryKeyHint);
     }
 
     private sealed class IndexBuilder(string name, string kind, bool isPrimaryKey, bool isUnique, bool isUniqueConstraint, bool hasFilter, string? filter, bool isDisabled)

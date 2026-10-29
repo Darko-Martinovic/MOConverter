@@ -23,7 +23,8 @@ public sealed record ServerFacts(
     int CompatibilityLevel,
     bool HasMemoryOptimizedFilegroup,
     long? MemoryLimitBytes,
-    string MemoryLimitSource)
+    string MemoryLimitSource,
+    string DatabaseCollation = "")
 {
     /// <summary>Azure SQL Database (EngineEdition 5); Managed Instance is 8.</summary>
     public bool IsAzureSqlDatabase => EngineEdition == 5;
@@ -57,7 +58,8 @@ public sealed record ColumnInfo(
     bool IsSparse = false,
     bool IsColumnSet = false,
     string? DefaultName = null,
-    string? DefaultDefinition = null);
+    string? DefaultDefinition = null,
+    string? Collation = null);
 
 public sealed record IndexColumn(string Name, bool IsDescending);
 
@@ -94,6 +96,7 @@ public sealed record TriggerInfo(string Name, bool IsInsteadOf, bool IsDisabled)
 /// <param name="DataBytes">Pages the heap or clustered index uses, in bytes, LOB pages included.</param>
 /// <param name="TemporalType">sys.tables.temporal_type: 1 a history table, 2 a system-versioned table.</param>
 /// <param name="LedgerType">sys.tables.ledger_type (SQL Server 2022+): 0 when not a ledger table.</param>
+/// <param name="PrimaryKeyHint">The table's MOIndexEp extended property, as version 1 read it: HASH asks for a hash primary key.</param>
 public sealed record TableInfo(
     ObjectName Name,
     long Rows,
@@ -112,7 +115,8 @@ public sealed record TableInfo(
     bool IsReplicated = false,
     bool IsChangeTracked = false,
     bool IsTrackedByCdc = false,
-    bool HasFullTextIndex = false);
+    bool HasFullTextIndex = false,
+    string? PrimaryKeyHint = null);
 
 public sealed record DatabaseModel(
     ServerFacts Server,

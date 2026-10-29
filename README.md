@@ -1,6 +1,6 @@
 # MOConverter
 
-MOConverter tells you which tables of a SQL Server database can become memory-optimized (In-Memory OLTP), and what stops the others.
+MOConverter tells you which tables of a SQL Server database can become memory-optimized (In-Memory OLTP) and what stops the others, and writes the T-SQL that converts them.
 
 The Red Gate Simple Talk article [Converting a Database to In-Memory OLTP](https://www.red-gate.com/simple-talk/sql/t-sql-programming/converting-database-memory-oltp/) explains the problem. The code as the article shows it, a library with WinForms and WPF front ends for SQL Server 2016 and 2017, is the [`v1-article`](https://github.com/Darko-Martinovic/MOConverter/tree/v1-article) tag. The `main` branch is version 2.
 
@@ -8,9 +8,9 @@ The Red Gate Simple Talk article [Converting a Database to In-Memory OLTP](https
 
 Version 2 is a command-line tool for SQL Server 2017 and later. It looks before it converts:
 
-- `assess` reports, table by table, what converting would do. It only reads. **Available now.**
-- `script` will write the T-SQL for the conversion, for you to review. **Coming next.**
-- `convert` will copy the tables you choose into a new database, as memory-optimized tables. The source isn't changed. **Coming after `script`.**
+- `assess` reports, table by table, what converting would do. It only reads.
+- `script` writes the T-SQL that creates memory-optimized copies of the tables you choose in another database, for you to review and run. It only reads.
+- `convert` will create those tables and copy the data into them. The source isn't changed. **Coming next.**
 
 Version 1 converted every table and logged what it dropped on the way. Version 2 refuses a change in meaning unless you accept it with `--accept-lossy`. It also fixes version 1's mistakes:
 
@@ -24,7 +24,8 @@ Version 1 converted every table and logged what it dropped on the way. Version 2
 
 - .NET 10 SDK, to build and run it.
 - SQL Server 2017 or later, on Windows or Linux, or Azure SQL Managed Instance. Azure SQL Database works on the Premium and Business Critical tiers only, and hasn't been tested. The tests run on SQL Server 2022 and 2025.
-- For `assess`: a login that can see the database's definitions (VIEW DEFINITION). VIEW SERVER STATE lets it compare the size of the tables with the server's memory; without it, the memory check is skipped.
+- For `assess` and `script`: a login that can see the database's definitions (VIEW DEFINITION). VIEW SERVER STATE lets it compare the size of the tables with the server's memory; without it, the memory check is skipped.
+- To run the script: permission to create a database, or to alter the target database if it exists.
 
 ## Running it
 
@@ -38,19 +39,62 @@ or install it as a .NET tool from the repository:
 dotnet pack src/MOConverter.Cli -o artifacts
 dotnet tool install --global MOConverter --add-source artifacts
 moconverter assess --source "..."
+moconverter script --source "..." --tables sales.Orders,sales.OrderLines --target-db SalesInMemory --out convert.sql
 ```
 
-Options:
+Options of both commands:
 
 | Option | Meaning |
 |---|---|
 | `-s`, `--source` | The database, as a SqlClient connection string. Without it, the `MOCONVERTER_SOURCE` environment variable, which keeps a password off the command line. |
 | `--trust-server-certificate` | Accept a self-signed certificate, such as a container's. |
-| `-t`, `--tables` | Comma-separated tables: `schema.table`, or `table` in any schema. Names with commas, dots or spaces go in brackets: `[Sales].[Order Details]`. |
+| `-t`, `--tables` | Comma-separated tables: `schema.table`, or `table` in any schema. Names with commas, dots or spaces go in brackets: `[Sales].[Order Details]`. A name matches regardless of case, unless a table matches it exactly. |
 | `--schemas` | Comma-separated schemas. With neither `--tables` nor `--schemas`, every table. |
+
+`assess` only:
+
+| Option | Meaning |
+|---|---|
 | `-f`, `--format` | `table` (the default), `json` or `markdown`. |
 
-The exit code is 0 when nothing selected is blocked, 2 when something is, and 1 when the database couldn't be read. So `assess` can run in a pipeline.
+`script` only:
+
+| Option | Meaning |
+|---|---|
+| `-d`, `--target-db` | The database to create the tables in. The script creates it, with the source's collation, if it doesn't exist. It can't be the source. |
+| `-o`, `--out` | The file to write. |
+| `--accept-lossy` | Script lossy tables too, with each change marked `LOSSY` in the script. Without it, nothing is written while a selected table is lossy. |
+| `--hash-pk` | Tables whose primary key becomes a hash index, with twice as many buckets as rows, rounded up to a power of two. Version 1's `MOIndexEp` extended property set to `HASH` asks for the same. Other primary keys get a range (nonclustered) index. |
+| `--schema-only` | Tables made `DURABILITY = SCHEMA_ONLY`: their rows don't survive a restart. |
+
+The exit code is 0 when nothing selected is blocked, 2 when something is (or, for `script`, when a lossy table isn't accepted), and 1 when the database couldn't be read or an option is wrong. So `assess` can run in a pipeline.
+
+## The script
+
+`script` writes nothing while a selected table is blocked. A foreign key to a table that isn't selected blocks the table, so the selection must take both ends of each key. The script then:
+
+1. creates the target database if it doesn't exist, and turns on `MEMORY_OPTIMIZED_ELEVATE_TO_SNAPSHOT`;
+2. adds a memory-optimized filegroup, with its container in the server's default data folder, if the database has none;
+3. creates the schemas and the tables, with the changes the assessment describes, each marked in a comment: `FIXED` for one that keeps the data and query results, `LOSSY` for one that doesn't;
+4. adds the foreign keys once every table exists.
+
+Part of the script for the test tables, with some columns left out here:
+
+```sql
+-- [cases].[LossyTypes]: 0 rows
+CREATE TABLE [cases].[LossyTypes]
+(
+    [Id] int NOT NULL,
+    -- LOSSY: xml → nvarchar(max): XML methods, XML indexes and schema validation are lost
+    [Doc] nvarchar(max) NULL,
+    -- LOSSY: datetimeoffset(3) → datetime2(3): it is stored in UTC, and the offset is lost
+    [Moment] datetime2(3) NULL,
+    CONSTRAINT [PK__LossyTyp__3214EC07A1B2C3D4] PRIMARY KEY NONCLUSTERED ([Id])
+)
+WITH (MEMORY_OPTIMIZED = ON, DURABILITY = SCHEMA_AND_DATA);
+```
+
+The tables are empty. T-SQL can't copy the data: a statement that touches a memory-optimized table can't touch another database (Msg 41317). Copying is `convert`'s job. The script sets `QUOTED_IDENTIFIER` itself, so `sqlcmd -b -i convert.sql` runs it as it is.
 
 ## What it says
 

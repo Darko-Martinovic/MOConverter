@@ -108,6 +108,15 @@ public sealed partial class SqlServer : IAsyncLifetime
         }
     }
 
+    /// <summary>Runs a script with sqlcmd in the container, stopping at the first error, as a DBA would run it.</summary>
+    public async Task<DotNet.Testcontainers.Containers.ExecResult> SqlcmdAsync(string script)
+    {
+        var path = $"/tmp/{Guid.NewGuid():N}.sql";
+        await _container.CopyAsync(System.Text.Encoding.UTF8.GetBytes(script), path);
+        var password = new SqlConnectionStringBuilder(_container.GetConnectionString()).Password;
+        return await _container.ExecAsync(["/opt/mssql-tools18/bin/sqlcmd", "-C", "-b", "-S", "localhost", "-U", "sa", "-P", password, "-i", path]);
+    }
+
     public ValueTask DisposeAsync() => _container.DisposeAsync();
 
     private static string Fixture(string name) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", name));
