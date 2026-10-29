@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>MOConverter.Cli</RootNamespace>
+    <AssemblyName>moconverter</AssemblyName>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>moconverter</ToolCommandName>
+    <PackageId>MOConverter</PackageId>
+    <Description>Checks which tables of a SQL Server database can become memory-optimized (In-Memory OLTP), and why not.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MOConverter.Core\MOConverter.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Spectre.Console.Cli" />
+  </ItemGroup>
+
+</Project>
