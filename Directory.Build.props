@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>2.0.0</Version>
+    <Version>2.0.1</Version>
     <Authors>Darko Martinovic</Authors>
     <RepositoryUrl>https://github.com/Darko-Martinovic/MOConverter</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

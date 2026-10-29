@@ -32,20 +32,23 @@ Version 1 converted every table and logged what it dropped on the way. Version 2
 
 ## Running it
 
-```
-dotnet run --project src/MOConverter.Cli -- assess --source "Server=.;Database=Sales;Integrated Security=true;TrustServerCertificate=true"
-```
-
-or install it as a .NET tool from the repository:
+Install it from nuget.org as a .NET tool:
 
 ```
-dotnet pack src/MOConverter.Cli -o artifacts
-dotnet tool install --global MOConverter --add-source artifacts
-moconverter assess --source "..."
+dotnet tool install --global MOConverter
+moconverter assess --source "Server=.;Database=Sales;Integrated Security=true;TrustServerCertificate=true"
 moconverter script --source "..." --tables sales.Orders,sales.OrderLines --target-db SalesInMemory --out convert.sql
 moconverter convert --source "..." --tables sales.Orders,sales.OrderLines --target-db SalesInMemory
 moconverter rules
 ```
+
+or run it from the repository:
+
+```
+dotnet run --project src/MOConverter.Cli -- assess --source "..."
+```
+
+A tag `vX.Y.Z` whose GitHub release is published goes to nuget.org through the `release` workflow, which nuget.org trusts by Trusted Publishing: no API key is stored in the repository.
 
 Options of `assess`, `script` and `convert`:
 
