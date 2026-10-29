@@ -9,7 +9,7 @@ public static class TableRules
         TableKind(table)
             .Concat(table.Columns.SelectMany(c => Column(table, c)))
             .Concat(Indexes(table))
-            .Concat(table.Checks.SelectMany(Check))
+            .Concat(table.Checks.SelectMany(c => Check(table.Name, c)))
             .Concat(foreignKeys.Where(k => k.Table == table.Name).SelectMany(ForeignKey))
             .Concat(table.Triggers.Select(Trigger));
 
@@ -183,7 +183,7 @@ public static class TableRules
             .Order(StringComparer.Ordinal)
             .ToList();
 
-    private static IEnumerable<Finding> Check(CheckInfo check)
+    private static IEnumerable<Finding> Check(ObjectName table, CheckInfo check)
     {
         var name = ObjectName.Quote(check.Name);
         if (check.IsDisabled)
@@ -204,7 +204,15 @@ public static class TableRules
             yield return new(RuleCatalogue.CheckUnsupported,
                 $"check constraint {name} {check.Definition} uses {Expressions.Describe(unsupported)}, and is left out");
         }
+        else if (check.IsNotTrusted)
+        {
+            yield return new(RuleCatalogue.Untrusted, Untrusted("check constraint", table, check.Name));
+        }
     }
+
+    private static string Untrusted(string what, ObjectName table, string name) =>
+        $"{what} {ObjectName.Quote(name)} was made WITH NOCHECK, so rows may break it: check them with "
+        + $"ALTER TABLE {table} WITH CHECK CHECK CONSTRAINT {ObjectName.Quote(name)}, or drop it";
 
     private static IEnumerable<Finding> ForeignKey(ForeignKeyInfo key)
     {
@@ -217,6 +225,8 @@ public static class TableRules
 
         if (!key.ReferencesPrimaryKey)
             yield return new(RuleCatalogue.ForeignKeyTarget, $"foreign key {name} references a unique key of {key.Referenced}, not its primary key");
+        if (key.IsNotTrusted)
+            yield return new(RuleCatalogue.Untrusted, Untrusted("foreign key", key.Table, key.Name));
 
         var actions = new[] { ("ON DELETE", key.DeleteAction), ("ON UPDATE", key.UpdateAction) }
             .Where(a => a.Item2 != "NO_ACTION")

@@ -29,5 +29,8 @@ public static class App
             .WithDescription("Create a new database with memory-optimized copies of the selected tables, and copy their data. The source is only read.")
             .WithExample("convert", "--tables", "dbo.Orders,dbo.OrderLines", "--target-db", "SalesInMemory")
             .WithExample("convert", "--schemas", "sales", "--target-db", "SalesInMemory", "--accept-lossy", "--target", "\"Server=other;Integrated Security=true\"");
+        config.AddCommand<RulesCommand>("rules")
+            .WithDescription("List the rules the assessment applies, and what each outcome means for a table.")
+            .WithExample("rules", "--format", "markdown");
     }
 }

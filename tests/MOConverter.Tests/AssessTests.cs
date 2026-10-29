@@ -56,6 +56,9 @@ public sealed class AssessTests(SqlServer server)
     [InlineData("TemporalHistory", Outcome.Blocked, "temporal", "no-primary-key", "clustered-index", "compression")]
     [InlineData("Linked", Outcome.Blocked, "foreign-key-boundary")]
     [InlineData("LinkedToLinked", Outcome.Blocked, "foreign-key-boundary")]
+    [InlineData("LooseChild", Outcome.Blocked, "untrusted")]
+    [InlineData("LooseParent", Outcome.Blocked, "foreign-key-boundary")]
+    [InlineData("LooseCheck", Outcome.Blocked, "untrusted")]
     public async Task Each_case_has_its_outcome_and_findings(string table, Outcome outcome, params string[] rules)
     {
         var assessed = Table(await AssessAsync(), table);

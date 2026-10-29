@@ -149,6 +149,13 @@ CREATE TABLE cases.Temporal (
 CREATE TABLE cases.Linked (Id int PRIMARY KEY, VariantId int NULL CONSTRAINT FK_Linked_Variant REFERENCES cases.Variant (Id));
 -- Blocked in turn: linked to Linked
 CREATE TABLE cases.LinkedToLinked (Id int PRIMARY KEY, LinkedId int NULL CONSTRAINT FK_LinkedToLinked_Linked REFERENCES cases.Linked (Id));
+-- Blocked: constraints made WITH NOCHECK, which the memory-optimized copy would check; and the
+-- table the untrusted key references, in turn
+CREATE TABLE cases.LooseParent (Id int PRIMARY KEY);
+CREATE TABLE cases.LooseChild (Id int PRIMARY KEY, ParentId int NULL);
+ALTER TABLE cases.LooseChild WITH NOCHECK ADD CONSTRAINT FK_LooseChild_Parent FOREIGN KEY (ParentId) REFERENCES cases.LooseParent (Id);
+CREATE TABLE cases.LooseCheck (Id int PRIMARY KEY, A int NULL);
+ALTER TABLE cases.LooseCheck WITH NOCHECK ADD CONSTRAINT CK_LooseCheck_A CHECK (A > 0);
 
 -- Rows for convert to copy, with the values its mappings must keep
 INSERT cases.Ready (Name, Owner) VALUES (N'No owner', NULL);

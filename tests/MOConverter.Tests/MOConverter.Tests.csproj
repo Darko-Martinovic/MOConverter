@@ -26,4 +26,9 @@
     <Content Include="Fixtures\*.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- ReadmeTests reads the README from the repository -->
+    <AssemblyMetadata Include="RepositoryRoot" Value="$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../..'))" />
+  </ItemGroup>
+
 </Project>

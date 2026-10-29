@@ -79,6 +79,7 @@ public sealed record IndexInfo(
 
 /// <param name="DeleteAction">sys.foreign_keys' action: NO_ACTION, CASCADE, SET_NULL or SET_DEFAULT.</param>
 /// <param name="ReferencesPrimaryKey">False when the key references a unique constraint or index instead.</param>
+/// <param name="IsNotTrusted">Made or re-enabled WITH NOCHECK, so rows may break it; true for a disabled one too.</param>
 public sealed record ForeignKeyInfo(
     string Name,
     ObjectName Table,
@@ -87,9 +88,11 @@ public sealed record ForeignKeyInfo(
     string UpdateAction,
     bool IsDisabled,
     bool ReferencesPrimaryKey,
-    IReadOnlyList<(string Column, string Referenced)> Columns);
+    IReadOnlyList<(string Column, string Referenced)> Columns,
+    bool IsNotTrusted = false);
 
-public sealed record CheckInfo(string Name, string Definition, bool IsDisabled);
+/// <param name="IsNotTrusted">Made or re-enabled WITH NOCHECK, so rows may break it; true for a disabled one too.</param>
+public sealed record CheckInfo(string Name, string Definition, bool IsDisabled, bool IsNotTrusted = false);
 
 public sealed record TriggerInfo(string Name, bool IsInsteadOf, bool IsDisabled);
 
