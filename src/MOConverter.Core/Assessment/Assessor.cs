@@ -29,12 +29,14 @@ public static class Assessor
 {
     public const int MinimumMajorVersion = 14;
 
-    public static async Task<Assessment> AssessAsync(string connectionString, Selection selection, CancellationToken cancellationToken = default)
+    public static async Task<Assessment> AssessAsync(string connectionString, Selection selection, CancellationToken cancellationToken = default) =>
+        Assess(await ReadAsync(connectionString, cancellationToken), selection);
+
+    public static async Task<DatabaseModel> ReadAsync(string connectionString, CancellationToken cancellationToken = default)
     {
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
-        var model = await CatalogReader.ReadAsync(connection, cancellationToken);
-        return Assess(model, selection);
+        return await CatalogReader.ReadAsync(connection, cancellationToken);
     }
 
     public static Assessment Assess(DatabaseModel model, Selection selection)

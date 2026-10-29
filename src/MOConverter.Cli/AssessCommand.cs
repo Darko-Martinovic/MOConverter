@@ -62,7 +62,7 @@ public class SourceSettings : CommandSettings
     }
 }
 
-public sealed class AssessSettings : SourceSettings
+public class SelectionSettings : SourceSettings
 {
     [CommandOption("-t|--tables <TABLES>")]
     [Description("Comma-separated tables to look at: schema.table, or table in any schema. Names with commas or dots go in [[brackets]].")]
@@ -72,10 +72,7 @@ public sealed class AssessSettings : SourceSettings
     [Description("Comma-separated schemas whose tables to look at. With neither --tables nor --schemas, every table.")]
     public string? Schemas { get; init; }
 
-    [CommandOption("-f|--format <FORMAT>")]
-    [Description("table (the default), json or markdown.")]
-    [DefaultValue(OutputFormat.Table)]
-    public OutputFormat Format { get; init; } = OutputFormat.Table;
+    public Selection Selection => Selection.Parse(Tables, Schemas);
 
     public override ValidationResult Validate()
     {
@@ -92,6 +89,14 @@ public sealed class AssessSettings : SourceSettings
     }
 }
 
+public sealed class AssessSettings : SelectionSettings
+{
+    [CommandOption("-f|--format <FORMAT>")]
+    [Description("table (the default), json or markdown.")]
+    [DefaultValue(OutputFormat.Table)]
+    public OutputFormat Format { get; init; } = OutputFormat.Table;
+}
+
 public sealed class AssessCommand(IAnsiConsole console) : AsyncCommand<AssessSettings>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, AssessSettings settings, CancellationToken cancellationToken)
@@ -99,7 +104,7 @@ public sealed class AssessCommand(IAnsiConsole console) : AsyncCommand<AssessSet
         Assessment.Assessment assessment;
         try
         {
-            assessment = await Assessor.AssessAsync(settings.ConnectionString(), Selection.Parse(settings.Tables, settings.Schemas), cancellationToken);
+            assessment = await Assessor.AssessAsync(settings.ConnectionString(), settings.Selection, cancellationToken);
         }
         catch (SqlException e)
         {

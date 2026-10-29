@@ -7,7 +7,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>moconverter</ToolCommandName>
     <PackageId>MOConverter</PackageId>
-    <Description>Checks which tables of a SQL Server database can become memory-optimized (In-Memory OLTP), and why not.</Description>
+    <Description>Checks which tables of a SQL Server database can become memory-optimized (In-Memory OLTP), and why not, and scripts their conversion.</Description>
   </PropertyGroup>
 
   <ItemGroup>
