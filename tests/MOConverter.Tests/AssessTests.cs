@@ -162,7 +162,7 @@ public sealed class AssessTests(SqlServer server)
     {
         var ready = Table(await AssessAsync(), "Ready");
 
-        Assert.Equal(1000, ready.Rows);
+        Assert.Equal(1001, ready.Rows);
         Assert.InRange(ready.EstimatedBytes, 100_000, 10_000_000);
     }
 

@@ -25,5 +25,9 @@ public static class App
             .WithDescription("Write the T-SQL that creates memory-optimized copies of the selected tables in another database. Changes nothing.")
             .WithExample("script", "--tables", "dbo.Orders,dbo.OrderLines", "--target-db", "SalesInMemory", "--out", "convert.sql")
             .WithExample("script", "--schemas", "sales", "--target-db", "SalesInMemory", "--out", "convert.sql", "--accept-lossy", "--hash-pk", "sales.Orders");
+        config.AddCommand<ConvertCommand>("convert")
+            .WithDescription("Create a new database with memory-optimized copies of the selected tables, and copy their data. The source is only read.")
+            .WithExample("convert", "--tables", "dbo.Orders,dbo.OrderLines", "--target-db", "SalesInMemory")
+            .WithExample("convert", "--schemas", "sales", "--target-db", "SalesInMemory", "--accept-lossy", "--target", "\"Server=other;Integrated Security=true\"");
     }
 }

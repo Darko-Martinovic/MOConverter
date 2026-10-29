@@ -29,6 +29,19 @@ public static class Scripter
 
     public static string Script(DatabaseModel model, IReadOnlyCollection<ObjectName> tables, ScriptOptions options)
     {
+        var (setup, foreignKeys) = Parts(model, tables, options);
+        return foreignKeys.Length == 0 ? setup : $"{setup}{Environment.NewLine}{foreignKeys}";
+    }
+
+    /// <summary>
+    /// The script in two parts: everything up to the empty tables, which ends in the target
+    /// database (it has a USE); and the foreign keys, which convert adds after the data.
+    /// </summary>
+    public static (string Setup, string ForeignKeys) Parts(DatabaseModel model, IReadOnlyCollection<ObjectName> tables, ScriptOptions options) =>
+        (Setup(model, tables, options), ForeignKeys(model, tables));
+
+    private static string Setup(DatabaseModel model, IReadOnlyCollection<ObjectName> tables, ScriptOptions options)
+    {
         var chosen = model.Tables.Where(t => tables.Contains(t.Name)).ToList();
         var target = Quote(options.TargetDatabase);
         var filegroup = options.TargetDatabase + "_mo";
@@ -74,19 +87,23 @@ public static class Scripter
             text.AppendLine("GO");
         }
 
+        return text.ToString();
+    }
+
+    private static string ForeignKeys(DatabaseModel model, IReadOnlyCollection<ObjectName> tables)
+    {
         var keys = model.ForeignKeys
-            .Where(k => tables.Contains(k.Table) && tables.Contains(k.Referenced))
+            .Where(k => !k.IsDisabled && tables.Contains(k.Table) && tables.Contains(k.Referenced))
             .OrderBy(k => k.Table.ToString(), StringComparer.Ordinal).ThenBy(k => k.Name, StringComparer.Ordinal)
             .ToList();
-        if (keys.Count > 0)
-        {
-            text.AppendLine();
-            text.AppendLine("-- Foreign keys, once every table exists");
-            foreach (var key in keys)
-                ForeignKey(text, key);
-            text.AppendLine("GO");
-        }
+        if (keys.Count == 0)
+            return "";
 
+        var text = new StringBuilder();
+        text.AppendLine("-- Foreign keys, once every table exists");
+        foreach (var key in keys)
+            ForeignKey(text, key);
+        text.AppendLine("GO");
         return text.ToString();
     }
 
@@ -260,9 +277,6 @@ public static class Scripter
 
     private static void ForeignKey(StringBuilder text, ForeignKeyInfo key)
     {
-        if (key.IsDisabled)
-            return;
-
         var actions = new[] { ("ON DELETE", key.DeleteAction), ("ON UPDATE", key.UpdateAction) }
             .Where(a => a.Item2 != "NO_ACTION")
             .Select(a => $"{a.Item1} {a.Item2.Replace('_', ' ')}")

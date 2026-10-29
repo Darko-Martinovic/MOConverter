@@ -132,3 +132,29 @@ CREATE TABLE cases.Temporal (
 CREATE TABLE cases.Linked (Id int PRIMARY KEY, VariantId int NULL CONSTRAINT FK_Linked_Variant REFERENCES cases.Variant (Id));
 -- Blocked in turn: linked to Linked
 CREATE TABLE cases.LinkedToLinked (Id int PRIMARY KEY, LinkedId int NULL CONSTRAINT FK_LinkedToLinked_Linked REFERENCES cases.Linked (Id));
+
+-- Rows for convert to copy, with the values its mappings must keep
+INSERT cases.Ready (Name, Owner) VALUES (N'No owner', NULL);
+INSERT cases.UpperLimit (Id, UpperLimit) VALUES (1, 10);
+INSERT cases.ManyIndexes (Id, A, I) VALUES (1, 1, 9);
+INSERT cases.Columnstore (Id, A) VALUES (1, 1), (2, 2);
+INSERT cases.[Order Details] ([Order Id], [Select], [Unit]]Price]) VALUES (1, 2, 3.50);
+INSERT cases.Parent (Id) VALUES (1), (2);
+INSERT cases.Child (Id, ParentId) VALUES (10, 1), (11, NULL);
+INSERT cases.AliasTypes (Id, Name, Stamp) VALUES (3000000000, 'abc', '2026-10-29T12:34:56.789');
+INSERT cases.OldLobTypes (Id, Notes, Wide, Picture) VALUES (1, 'old text', N'old ntext', 0x0102);
+INSERT cases.Indexes (Id, A, B, C) VALUES (1, 1, 1, 1), (2, NULL, 2, NULL);
+INSERT cases.ComputedIndexed (Id, Price) VALUES (1, 21);
+INSERT cases.Sparse (Id, Rare) VALUES (1, NULL), (2, 5);
+INSERT cases.Partitioned (Id) VALUES (1), (200);
+INSERT cases.Compressed (Id, Name) VALUES (1, N'x');
+INSERT cases.LossyTypes (Id, Doc, Place, Shape, Node, Moment) VALUES (
+    1, '<a b="1"/>', geography::Point(44.8, 20.46, 4326), geometry::STGeomFromText('LINESTRING (0 0, 1 1)', 0),
+    hierarchyid::Parse('/1/2/'), '2026-10-29T12:00:00+02:00');
+INSERT cases.AliasLossy (Id, Moment) VALUES (1, '2026-10-29T12:00:00-05:00');
+INSERT cases.Checks (Id, Code, Name) VALUES (1, 'Abc', 'ABC');
+INSERT cases.Defaults (Id, Num, Host) VALUES (1, NULL, NULL);
+INSERT cases.IdentitySeed (Name) VALUES (N'a'), (N'b');
+INSERT cases.BigSeed DEFAULT VALUES;
+INSERT cases.Audited (Id, Name) VALUES (1, N'x');
+INSERT cases.Tracked (Id) VALUES (1);
