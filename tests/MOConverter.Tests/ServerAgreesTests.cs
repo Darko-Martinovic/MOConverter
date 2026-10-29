@@ -192,8 +192,8 @@ public sealed class ServerAgreesTests(SqlServer server)
     }
 
     /// <summary>
-    /// Index keys of other columns, then a last column whose width is found: "varchar NULL",
-    /// "int NOT NULL" and so on.
+    /// Index keys: columns separated by "; ", each a type and NULL or NOT NULL. A type without a
+    /// length (varchar, char, binary, varbinary, nvarchar) is the one whose width is found.
     /// </summary>
     public static TheoryData<string> KeyShapes =>
     [
@@ -208,99 +208,137 @@ public sealed class ServerAgreesTests(SqlServer server)
         "varchar(1200) NOT NULL; varchar NOT NULL",
         "char(100) NOT NULL; char NOT NULL",
         "varchar(100) NOT NULL; varchar(100) NOT NULL; varchar NOT NULL",
+        "int NOT NULL; varchar(100) NOT NULL; varchar NOT NULL",
         "binary(8) NOT NULL; varchar NOT NULL",
         "nvarchar(50) NOT NULL; varchar NOT NULL",
+        "nchar(10) NOT NULL; varchar NOT NULL",
+        "sysname NOT NULL; varchar NOT NULL",
         "bigint NOT NULL; varchar NOT NULL",
         "bigint NULL; varchar NOT NULL",
         "bigint NOT NULL; bigint NOT NULL; varchar NOT NULL",
         "datetime2 NOT NULL; varbinary NOT NULL",
-        "decimal NOT NULL; varchar NOT NULL",
+        "datetime2(2) NOT NULL; varchar NOT NULL",
+        "time NOT NULL; varchar NOT NULL",
+        "time(0) NOT NULL; varchar NOT NULL",
+        "date NOT NULL; varchar NOT NULL",
+        "datetime NOT NULL; varchar NOT NULL",
+        "smalldatetime NOT NULL; varchar NOT NULL",
+        "money NOT NULL; varchar NOT NULL",
+        "float NOT NULL; varchar NOT NULL",
+        "real NOT NULL; varchar NOT NULL",
+        "decimal(18,2) NOT NULL; varchar NOT NULL",
+        "numeric(9,2) NOT NULL; varchar NOT NULL",
+        "numeric(19,4) NOT NULL; varchar NOT NULL",
+        "numeric(38,0) NOT NULL; varchar NOT NULL",
         "uniqueidentifier NOT NULL; varchar NOT NULL",
+        "uniqueidentifier NOT NULL; bigint NOT NULL; varchar NOT NULL",
+        "smallint NOT NULL; int NOT NULL; varchar NOT NULL",
+        "tinyint NOT NULL; int NOT NULL; varchar NOT NULL",
         "tinyint NOT NULL; tinyint NOT NULL; tinyint NOT NULL; varchar NOT NULL",
         "bit NOT NULL; varchar NOT NULL",
+        "time NOT NULL; time NOT NULL; time NOT NULL; time NOT NULL; time NOT NULL; time NOT NULL; time NOT NULL; time NOT NULL; varchar NOT NULL",
+        "numeric(9,0) NOT NULL; numeric(9,0) NOT NULL; numeric(9,0) NOT NULL; numeric(9,0) NOT NULL; numeric(9,0) NOT NULL; numeric(9,0) NOT NULL; numeric(9,0) NOT NULL; numeric(9,0) NOT NULL; varchar NOT NULL",
         "int NULL; int NULL; int NULL; int NULL; int NULL; int NULL; int NULL; int NULL; int NULL; varchar NOT NULL",
     ];
 
     [Theory]
     [MemberData(nameof(KeyShapes))]
-    public async Task The_key_size_never_counts_less_than_the_server_and_at_most_4_bytes_more(string shape)
+    public async Task The_server_takes_every_range_key_the_tool_allows(string shape)
     {
-        var specs = shape.Split("; ");
-        int Count(int width) => Limits.KeyBytes(KeyTable(specs, width, out var index), index);
+        var columns = ShapeColumns(shape.Split("; "));
+        int Count(int width) => Limits.KeyBytes(Keyed(columns, width, out var index), index);
 
-        // The widest last column the tool says fits
         var widest = Enumerable.Range(1, 8000).Last(w => Count(w) <= Limits.MaxKeyBytes);
-        Assert.Null(await TryAsync(KeySql(specs, widest)));
-        Refused(await TryAsync(KeySql(specs, widest + 5)));
+        Assert.Null(await TryAsync(ShapeSql(columns, widest, index: true)));
+        // Not much stricter than the server either
+        Refused(await TryAsync(ShapeSql(columns, widest + 48, index: true)));
     }
 
-    private static TableInfo KeyTable(string[] specs, int width, out IndexInfo index)
+    [Fact]
+    public async Task The_server_takes_every_hash_key_the_tool_allows()
     {
-        var columns = specs.Select((spec, i) =>
-        {
-            var parts = spec.Split(' ', 2);
-            var (type, length) = KeyType(parts[0], i == specs.Length - 1 ? width : null);
-            return new ColumnInfo($"c{i}", type.Split('(')[0], type.Split('(')[0], "sys", false, false, length,
-                type.StartsWith("decimal") ? 18 : 0, type.StartsWith("decimal") ? 2 : type.StartsWith("datetime2") ? 7 : 0,
-                IsNullable: parts[1] == "NULL");
-        }).ToList();
-        index = new IndexInfo("ix", "NONCLUSTERED", false, false, false, false, null, false, columns.Select(c => new IndexColumn(c.Name, false)).ToList(), []);
-        return new TableInfo(new ObjectName("dbo", "t"), 0, 0, columns, [index], [], []);
+        var columns = ShapeColumns(["varchar(8000) NOT NULL", "varchar NOT NULL"]);
+        int Count(int width) => Limits.KeyBytes(Keyed(columns, width, out var index), index);
+
+        var widest = Enumerable.Range(1, 8000).Last(w => Count(w) <= Limits.MaxHashKeyBytes);
+        var sql = ShapeSql(columns, widest, index: false);
+        Assert.Null(await server.TryAsync(SqlServer.Probe,
+            $"CREATE TABLE dbo.t_{Guid.NewGuid():N} ({sql}, PRIMARY KEY NONCLUSTERED HASH (c0, c1) WITH (BUCKET_COUNT = 64)) WITH (MEMORY_OPTIMIZED = ON);"));
+        Assert.NotNull(await server.TryAsync(SqlServer.Probe,
+            $"CREATE TABLE dbo.t_{Guid.NewGuid():N} ({ShapeSql(columns, widest + 48, index: false)}, PRIMARY KEY NONCLUSTERED HASH (c0, c1) WITH (BUCKET_COUNT = 64)) WITH (MEMORY_OPTIMIZED = ON);"));
     }
 
-    private static string KeySql(string[] specs, int width) =>
-        string.Join(", ", specs.Select((spec, i) =>
-        {
-            var parts = spec.Split(' ', 2);
-            var type = parts[0] switch
-            {
-                "varchar" or "char" or "binary" or "varbinary" or "nvarchar" => $"{parts[0]}({width})",
-                "decimal" => "decimal(18,2)",
-                _ => parts[0],
-            };
-            return $"c{i} {type} {parts[1]}";
-        }))
-        + $", INDEX ix ({string.Join(", ", specs.Select((_, i) => $"c{i}"))})";
-
-    private static (string Type, int Length) KeyType(string type, int? width)
-    {
-        var open = type.IndexOf('(');
-        if (open > 0)
-        {
-            var length = int.Parse(type[(open + 1)..^1], System.Globalization.CultureInfo.InvariantCulture);
-            return (type, type.StartsWith('n') ? 2 * length : length);
-        }
-
-        return type switch
-        {
-            "varchar" or "char" or "binary" or "varbinary" => (type, width ?? 1),
-            "nvarchar" => (type, 2 * (width ?? 1)),
-            "int" => (type, 4),
-            "bigint" => (type, 8),
-            "tinyint" or "bit" => (type, 1),
-            "uniqueidentifier" => (type, 16),
-            "datetime2" => (type, 8),
-            "decimal" => (type, 9),
-            _ => throw new ArgumentException(type),
-        };
-    }
-
+    /// <summary>A columnstore table's columns: a count of one type, then a filler whose width is found.</summary>
     [Theory]
-    // 8040 bytes of columns: 4 for the id, and the rest
-    [InlineData("a varchar(8000) NULL, b varchar({0}) NULL", 36)]
-    [InlineData("a varchar(4000) NULL, b varchar({0}) NULL", 4036)]
-    [InlineData("a binary(100) NULL, b varchar({0}) NULL", 7936)]
-    public async Task A_columnstore_row_fits_8040_bytes_of_columns(string shape, int widest)
+    [InlineData(1, "varchar(8000) NULL")]
+    [InlineData(1, "varchar(4000) NULL")]
+    [InlineData(1, "binary(100) NULL")]
+    [InlineData(100, "int NULL")]
+    [InlineData(100, "int NOT NULL")]
+    [InlineData(100, "time NULL")]
+    [InlineData(100, "numeric(9,0) NULL")]
+    [InlineData(100, "datetime2(0) NULL")]
+    [InlineData(100, "varchar(10) NULL")]
+    [InlineData(100, "char(10) NOT NULL")]
+    [InlineData(100, "date NULL")]
+    [InlineData(200, "bit NULL")]
+    [InlineData(50, "uniqueidentifier NULL")]
+    [InlineData(50, "numeric(38,2) NULL")]
+    public async Task The_server_takes_every_columnstore_row_the_tool_allows(int count, string type)
     {
+        var columns = ShapeColumns([.. Enumerable.Repeat(type, count), "varchar NULL"]);
         string Table(int width) =>
-            $"CREATE TABLE dbo.t_{Guid.NewGuid():N} (id int NOT NULL PRIMARY KEY NONCLUSTERED, {string.Format(shape, width)}, INDEX cci CLUSTERED COLUMNSTORE) WITH (MEMORY_OPTIMIZED = ON);";
+            $"CREATE TABLE dbo.t_{Guid.NewGuid():N} (id int NOT NULL PRIMARY KEY NONCLUSTERED, {ShapeSql(columns, width, index: false)}, INDEX cci CLUSTERED COLUMNSTORE) WITH (MEMORY_OPTIMIZED = ON);";
+        int Row(int width) => Limits.RowBytes(new TableInfo(new ObjectName("dbo", "t"), 0, 0,
+            [new ColumnInfo("id", "int", "int", "sys", false, false, 4, 10, 0, IsNullable: false), .. Keyed(columns, width, out _).Columns], [], [], []));
 
+        var widest = Enumerable.Range(1, 8000).Last(w => Row(w) <= Limits.MaxColumnstoreRowBytes);
         Assert.Null(await server.TryAsync(SqlServer.Probe, Table(widest)));
-        Assert.NotNull(await server.TryAsync(SqlServer.Probe, Table(widest + 1)));
-
-        var first = int.Parse(shape[(shape.IndexOf('(') + 1)..shape.IndexOf(')')], System.Globalization.CultureInfo.InvariantCulture);
-        Assert.Equal(Limits.MaxColumnstoreRowBytes, 4 + first + widest);
+        Assert.NotNull(await server.TryAsync(SqlServer.Probe, Table(widest + 64)));
     }
+
+    private sealed record ShapeColumn(string Sql, string Type, int MaxLength, int Precision, int Scale, bool Nullable, bool Grows);
+
+    /// <summary>Columns from their declarations, with what sys.columns would say of each.</summary>
+    private static List<ShapeColumn> ShapeColumns(string[] specs) => specs.Select(spec =>
+    {
+        var parts = spec.Split(' ', 2);
+        var nullable = parts[1] == "NULL";
+        var declared = parts[0];
+        var open = declared.IndexOf('(');
+        var name = open > 0 ? declared[..open] : declared;
+        var arguments = open > 0 ? declared[(open + 1)..^1].Split(',').Select(a => int.Parse(a, System.Globalization.CultureInfo.InvariantCulture)).ToArray() : [];
+        return name switch
+        {
+            "varchar" or "char" or "binary" or "varbinary" when arguments.Length == 0 => new ShapeColumn(declared, name, 0, 0, 0, nullable, Grows: true),
+            "varchar" or "char" or "binary" or "varbinary" => new ShapeColumn(declared, name, arguments[0], 0, 0, nullable, false),
+            "nvarchar" or "nchar" => new ShapeColumn(declared, name, 2 * arguments[0], 0, 0, nullable, false),
+            "sysname" => new ShapeColumn(declared, "sysname", 256, 0, 0, nullable, false),
+            "decimal" or "numeric" => new ShapeColumn(declared, name, arguments[0] switch { <= 9 => 5, <= 19 => 9, <= 28 => 13, _ => 17 }, arguments[0], arguments.ElementAtOrDefault(1), nullable, false),
+            "datetime2" => new ShapeColumn(declared, name, 8, 27, arguments.Length > 0 ? arguments[0] : 7, nullable, false),
+            "time" => new ShapeColumn(declared, name, 5, 16, arguments.Length > 0 ? arguments[0] : 7, nullable, false),
+            "int" or "real" or "smallmoney" or "smalldatetime" => new ShapeColumn(declared, name, 4, 0, 0, nullable, false),
+            "bigint" or "money" or "datetime" or "float" => new ShapeColumn(declared, name, 8, 0, 0, nullable, false),
+            "smallint" => new ShapeColumn(declared, name, 2, 0, 0, nullable, false),
+            "tinyint" or "bit" => new ShapeColumn(declared, name, 1, 0, 0, nullable, false),
+            "date" => new ShapeColumn(declared, name, 3, 0, 0, nullable, false),
+            "uniqueidentifier" => new ShapeColumn(declared, name, 16, 0, 0, nullable, false),
+            _ => throw new ArgumentException(spec),
+        };
+    }).ToList();
+
+    /// <summary>The columns as the catalog would describe them, the growing one at this width, and an index on all of them.</summary>
+    private static TableInfo Keyed(List<ShapeColumn> columns, int width, out IndexInfo index)
+    {
+        var infos = columns.Select((c, i) => new ColumnInfo($"c{i}", c.Type, c.Type, "sys", false, false,
+            c.Grows ? width : c.MaxLength, c.Precision, c.Scale, c.Nullable)).ToList();
+        index = new IndexInfo("ix", "NONCLUSTERED", false, false, false, false, null, false, infos.Select(c => new IndexColumn(c.Name, false)).ToList(), []);
+        return new TableInfo(new ObjectName("dbo", "t"), 0, 0, infos, [index], [], []);
+    }
+
+    private static string ShapeSql(List<ShapeColumn> columns, int width, bool index) =>
+        string.Join(", ", columns.Select((c, i) => $"c{i} {(c.Grows ? $"{c.Sql}({width})" : c.Sql)} {(c.Nullable ? "NULL" : "NOT NULL")}"))
+        + (index ? $", INDEX ix ({string.Join(", ", columns.Select((_, i) => $"c{i}"))})" : "");
 
     [Fact]
     public async Task A_hash_primary_key_can_be_wider()
@@ -337,9 +375,6 @@ public sealed class ServerAgreesTests(SqlServer server)
 
         Refused(await TryAsync($"p int NULL REFERENCES {parent} (id)"));
     }
-
-    private static ColumnInfo Column(string name, string type, int length, bool nullable) =>
-        new(name, type, type, "sys", false, false, length, 0, 0, nullable);
 
     [Fact]
     public async Task A_foreign_key_to_a_unique_key_is_refused()

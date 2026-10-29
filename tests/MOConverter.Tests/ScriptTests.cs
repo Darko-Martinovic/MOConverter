@@ -52,7 +52,7 @@ public sealed class ScriptTests(SqlServer server)
         "Indexes", "ComputedIndexed", "Sparse", "Partitioned", "Compressed", "Disabled", "LossyTypes", "AliasLossy",
         "Checks", "Defaults", "IdentitySeed", "BigSeed", "Child", "Audited", "Tracked",
         "WideIndex", "WidePrimaryKey", "Utf8", "ColumnstoreLimits", "WideUnique", "ComputedOverLossy", "CastCheck", "VersionKey",
-        "Brackets", "TwoVarIndex",
+        "Brackets", "TwoVarIndex", "KeyTime", "ReplicationCheck",
     ];
 
     public static TheoryData<string> Convertible => [.. ConvertibleNames];
@@ -124,7 +124,7 @@ public sealed class ScriptTests(SqlServer server)
         Assert.Equal(fromKey.Keys.Select(k => k.Name), toKey.Keys.Select(k => k.Name));
 
         // Too wide for a range index, or a columnstore index over nvarchar(max)
-        string[] dropped = ["IX_WideIndex_Code", "UQ_WideUnique_Note", "CCI_ColumnstoreLimits", "IX_TwoVarIndex"];
+        string[] dropped = ["IX_WideIndex_Code", "UQ_WideUnique_Note", "CCI_ColumnstoreLimits", "IX_TwoVarIndex", "IX_KeyTime"];
         var kept = from.Indexes.Where(i => !i.IsPrimaryKey && !i.IsDisabled && i.Kind is "CLUSTERED" or "NONCLUSTERED" or "CLUSTERED COLUMNSTORE"
             && !dropped.Contains(i.Name));
         Assert.Equal(kept.Select(i => i.Name).Order(), to.Indexes.Where(i => !i.IsPrimaryKey).Select(i => i.Name).Order());

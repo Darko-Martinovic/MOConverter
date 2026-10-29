@@ -154,6 +154,10 @@ public static class TableRules
                     // No index of a memory-optimized table can have a max column in its key, a hash one neither
                     yield return new(RuleCatalogue.MaxKey, $"primary key {name} has a column that becomes max, which no index can have in its key");
                 }
+                else if (index.IsPrimaryKey && key > Limits.MaxHashKeyBytes)
+                {
+                    yield return new(RuleCatalogue.MaxKey, $"{wide}, and more than the {Limits.MaxHashKeyBytes} a hash index allows");
+                }
                 else if (index.IsPrimaryKey)
                 {
                     yield return new(RuleCatalogue.WideKey, $"{wide}: it becomes a hash index");

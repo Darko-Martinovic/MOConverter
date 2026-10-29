@@ -54,7 +54,7 @@ public static class RuleCatalogue
     public static readonly Rule UniqueFilteredIndex = new("unique-filtered-index", Outcome.Blocked, "A unique filtered index: without its filter, rows it allowed could clash.");
     public static readonly Rule ForeignKeyBoundary = new("foreign-key-boundary", Outcome.Blocked, "A foreign key links the table to one that won't be in the new database: not selected, blocked, or memory-optimized already.");
     public static readonly Rule ForeignKeyTarget = new("foreign-key-target", Outcome.Blocked, "A foreign key references a unique key: between memory-optimized tables, it must reference the primary key.");
-    public static readonly Rule MaxKey = new("max-key", Outcome.Blocked, "A primary key column becomes max, as a UTF-8 varchar over 4000 does, and no index can have one in its key.");
+    public static readonly Rule MaxKey = new("max-key", Outcome.Blocked, "A primary key is too wide even for a hash index: a column becomes max, as a UTF-8 varchar over 4000 does, or the key passes 8060 bytes.");
     public static readonly Rule Untrusted = new("untrusted", Outcome.Blocked, "A foreign key or check made WITH NOCHECK may have rows that break it, and the memory-optimized copy checks every row.");
     public static readonly Rule DefinitionHidden = new("definition-hidden", Outcome.Blocked, "A definition isn't visible to this login: it needs VIEW DEFINITION.");
 
@@ -77,7 +77,7 @@ public static class RuleCatalogue
     public static readonly Rule Sparse = new("sparse", Outcome.Fixed, "SPARSE isn't supported: the column is stored in full.");
     public static readonly Rule Utf8Collation = new("utf8-collation", Outcome.Fixed, "char and varchar can't have a UTF-8 collation: they become nchar and nvarchar, with the same collation.");
     public static readonly Rule WideKey = new("wide-key", Outcome.Fixed, "A range index's key can't pass 2500 bytes: a primary key becomes a hash index, another index is left out.");
-    public static readonly Rule ColumnstoreLimits = new("columnstore-limits", Outcome.Fixed, "A clustered columnstore index is left out when a column is max, a column is computed, or a row can pass 8060 bytes.");
+    public static readonly Rule ColumnstoreLimits = new("columnstore-limits", Outcome.Fixed, "A clustered columnstore index is left out when a column is max, a column is computed, or a row is too long for one.");
     public static readonly Rule ComputedIndexPersisted = new("computed-index-persisted", Outcome.Fixed, "An index on a computed column needs it PERSISTED.");
     public static readonly Rule ClusteredIndex = new("clustered-index", Outcome.Fixed, "Memory-optimized tables have no clustered rowstore index: it becomes nonclustered.");
     public static readonly Rule IncludedColumns = new("included-columns", Outcome.Fixed, "Every index on a memory-optimized table covers all columns: INCLUDE is dropped.");
