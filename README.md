@@ -61,7 +61,7 @@ Each table gets the worst outcome among its findings:
 | ready | Converts as it is. |
 | fixed | The tool changes something, and the data and query results stay the same: an alias type becomes its base type, `text` becomes `varchar(max)`, a clustered index becomes nonclustered, a filter or INCLUDE is dropped from an index. |
 | lossy | Converts with a change in meaning, which `--accept-lossy` has to allow: `datetimeoffset` loses its offset, `xml` and the spatial types lose their methods, a CASCADE foreign key becomes NO ACTION, a check or default SQL Server refuses is left out, a trigger isn't carried over. |
-| blocked | Can't be converted until something changes: no primary key, `sql_variant`, a unique filtered index, a temporal, ledger or graph table, a foreign key to a table that won't be converted, or more data than memory. |
+| blocked | Can't be converted until something changes: no primary key (or a disabled one), `sql_variant`, a unique filtered index, a temporal, ledger or graph table, a foreign key to a unique key rather than the primary key, a foreign key to a table that won't be converted, a definition the login can't see, or more data than memory. |
 
 For example (a few of the test tables, cut to fit):
 

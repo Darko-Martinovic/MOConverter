@@ -31,12 +31,16 @@ public sealed class AssessTests(SqlServer server)
     [InlineData("Checks", Outcome.Lossy, "check-unsupported", "check-unsupported")]
     [InlineData("Defaults", Outcome.Lossy, "default-unsupported", "default-unsupported")]
     [InlineData("IdentitySeed", Outcome.Lossy, "identity-seed")]
+    [InlineData("BigSeed", Outcome.Lossy, "identity-seed")]
     [InlineData("Child", Outcome.Lossy, "foreign-key-action")]
     [InlineData("Audited", Outcome.Lossy, "trigger")]
     [InlineData("Tracked", Outcome.Lossy, "change-tracking")]
     [InlineData("NoPrimaryKey", Outcome.Blocked, "no-primary-key")]
     [InlineData("Variant", Outcome.Blocked, "type-unsupported")]
     [InlineData("ComputedUpper", Outcome.Blocked, "computed-unsupported")]
+    [InlineData("ComputedVariant", Outcome.Blocked, "computed-unsupported")]
+    [InlineData("UniqueChild", Outcome.Blocked, "foreign-key-target")]
+    [InlineData("UniqueParent", Outcome.Blocked, "foreign-key-boundary")]
     [InlineData("UniqueFiltered", Outcome.Blocked, "unique-filtered-index")]
     [InlineData("ColumnSet", Outcome.Blocked, "column-set", "sparse")]
     [InlineData("Temporal", Outcome.Blocked, "temporal")]
@@ -160,6 +164,21 @@ public sealed class AssessTests(SqlServer server)
 
         Assert.Equal(1000, ready.Rows);
         Assert.InRange(ready.EstimatedBytes, 100_000, 10_000_000);
+    }
+
+    [Fact]
+    public async Task Names_that_differ_only_in_case_are_different_tables()
+    {
+        var assessment = await Assessor.AssessAsync(server.ConnectionString(SqlServer.CaseSensitive), Selection.All, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            [("Orders", Outcome.Blocked), ("orders", Outcome.Blocked)],
+            assessment.Tables.Select(t => (t.Name.Name, t.Outcome)).OrderBy(t => t.Name, StringComparer.Ordinal));
+        Assert.Contains(assessment.Tables.Single(t => t.Name.Name == "Orders").Findings,
+            f => f.Message == "foreign key [FK_orders_Orders] links it to [dbo].[orders], which can't be converted");
+
+        var exact = await Assessor.AssessAsync(server.ConnectionString(SqlServer.CaseSensitive), Selection.Parse("dbo.orders", null), TestContext.Current.CancellationToken);
+        Assert.Equal([new ObjectName("dbo", "orders")], exact.Tables.Select(t => t.Name));
     }
 
     [Fact]

@@ -53,6 +53,7 @@ public static class RuleCatalogue
     public static readonly Rule ComputedUnsupported = new("computed-unsupported", Outcome.Blocked, "A computed column uses something memory-optimized tables don't accept.");
     public static readonly Rule UniqueFilteredIndex = new("unique-filtered-index", Outcome.Blocked, "A unique filtered index: without its filter, rows it allowed could clash.");
     public static readonly Rule ForeignKeyBoundary = new("foreign-key-boundary", Outcome.Blocked, "A foreign key links the table to one that won't be memory-optimized.");
+    public static readonly Rule ForeignKeyTarget = new("foreign-key-target", Outcome.Blocked, "A foreign key references a unique key: between memory-optimized tables, it must reference the primary key.");
     public static readonly Rule DefinitionHidden = new("definition-hidden", Outcome.Blocked, "A definition isn't visible to this login: it needs VIEW DEFINITION.");
 
     // Lossy changes

@@ -7,9 +7,9 @@ namespace MOConverter.Assessment;
 /// <summary>A table named on the command line: <c>schema.table</c>, or a bare name for any schema.</summary>
 public sealed record SelectedTable(string? Schema, string Name)
 {
-    public bool Matches(ObjectName table) =>
-        string.Equals(Name, table.Name, StringComparison.OrdinalIgnoreCase)
-        && (Schema is null || string.Equals(Schema, table.Schema, StringComparison.OrdinalIgnoreCase));
+    public bool Matches(ObjectName table, StringComparison comparison) =>
+        string.Equals(Name, table.Name, comparison)
+        && (Schema is null || string.Equals(Schema, table.Schema, comparison));
 
     public override string ToString() => Schema is null ? ObjectName.Quote(Name) : $"{ObjectName.Quote(Schema)}.{ObjectName.Quote(Name)}";
 }
@@ -21,16 +21,31 @@ public sealed record Selection(IReadOnlyList<string> Schemas, IReadOnlyList<Sele
 
     public bool IsAll => Schemas.Count == 0 && Tables.Count == 0;
 
-    public bool Includes(ObjectName table) =>
-        IsAll
-        || Schemas.Any(s => string.Equals(s, table.Schema, StringComparison.OrdinalIgnoreCase))
-        || Tables.Any(t => t.Matches(table));
+    /// <summary>
+    /// The tables the selection names. A name matches without regard to case, unless some table
+    /// matches it exactly, as in a case-sensitive database with both dbo.Orders and dbo.orders.
+    /// </summary>
+    public IReadOnlySet<ObjectName> Resolve(IReadOnlyCollection<ObjectName> tables)
+    {
+        if (IsAll)
+            return tables.ToHashSet();
+
+        return Schemas.SelectMany(s => Matching(tables, (t, c) => string.Equals(s, t.Schema, c)))
+            .Concat(Tables.SelectMany(n => Matching(tables, (t, c) => n.Matches(t, c))))
+            .ToHashSet();
+    }
 
     /// <summary>The names in the selection that match no table.</summary>
     public IEnumerable<string> Unmatched(IReadOnlyCollection<ObjectName> tables) =>
-        Schemas.Where(s => !tables.Any(t => string.Equals(s, t.Schema, StringComparison.OrdinalIgnoreCase)))
+        Schemas.Where(s => !Matching(tables, (t, c) => string.Equals(s, t.Schema, c)).Any())
             .Select(s => $"schema {ObjectName.Quote(s)}")
-            .Concat(Tables.Where(s => !tables.Any(s.Matches)).Select(s => $"table {s}"));
+            .Concat(Tables.Where(n => !Matching(tables, (t, c) => n.Matches(t, c)).Any()).Select(n => $"table {n}"));
+
+    private static IEnumerable<ObjectName> Matching(IReadOnlyCollection<ObjectName> tables, Func<ObjectName, StringComparison, bool> matches)
+    {
+        var exact = tables.Where(t => matches(t, StringComparison.Ordinal)).ToList();
+        return exact.Count > 0 ? exact : tables.Where(t => matches(t, StringComparison.OrdinalIgnoreCase));
+    }
 
     /// <summary>
     /// Reads comma-separated lists. Names may be bracketed or double-quoted, so

@@ -5,24 +5,37 @@ namespace MOConverter.Tests;
 
 public sealed class SelectionTests
 {
+    private static readonly ObjectName[] Tables =
+    [
+        new("dbo", "Orders"), new("sales", "Customers"), new("sales", "Orders"), new("hr", "People"),
+    ];
+
     [Fact]
     public void Nothing_named_means_every_table()
     {
         var selection = Selection.Parse(null, " ");
 
         Assert.True(selection.IsAll);
-        Assert.True(selection.Includes(new ObjectName("any", "Table")));
+        Assert.Equal(Tables.Length, selection.Resolve(Tables).Count);
     }
 
     [Fact]
     public void Tables_are_schema_qualified_or_bare()
     {
-        var selection = Selection.Parse("dbo.Orders, Customers", null);
+        var selection = Selection.Parse("DBO.orders, Customers", null);
 
-        Assert.Equal([new SelectedTable("dbo", "Orders"), new SelectedTable(null, "Customers")], selection.Tables);
-        Assert.True(selection.Includes(new ObjectName("DBO", "orders")));
-        Assert.True(selection.Includes(new ObjectName("sales", "Customers")));
-        Assert.False(selection.Includes(new ObjectName("sales", "Orders")));
+        Assert.Equal([new SelectedTable("DBO", "orders"), new SelectedTable(null, "Customers")], selection.Tables);
+        Assert.Equal([new ObjectName("dbo", "Orders"), new ObjectName("sales", "Customers")], selection.Resolve(Tables).Order(ByName));
+    }
+
+    [Fact]
+    public void An_exact_match_wins_over_one_that_differs_in_case()
+    {
+        // As in a database with a case-sensitive collation
+        ObjectName[] tables = [new("dbo", "Orders"), new("dbo", "orders")];
+
+        Assert.Equal([new ObjectName("dbo", "orders")], Selection.Parse("dbo.orders", null).Resolve(tables));
+        Assert.Equal(2, Selection.Parse("dbo.ORDERS", null).Resolve(tables).Count);
     }
 
     [Fact]
@@ -38,11 +51,11 @@ public sealed class SelectionTests
     [Fact]
     public void Schemas_select_their_tables()
     {
-        var selection = Selection.Parse(null, "sales,[hr]");
+        var selection = Selection.Parse(null, "Sales,[hr]");
 
-        Assert.True(selection.Includes(new ObjectName("Sales", "Orders")));
-        Assert.True(selection.Includes(new ObjectName("hr", "People")));
-        Assert.False(selection.Includes(new ObjectName("dbo", "Orders")));
+        Assert.Equal(
+            [new ObjectName("hr", "People"), new ObjectName("sales", "Customers"), new ObjectName("sales", "Orders")],
+            selection.Resolve(Tables).Order(ByName));
     }
 
     [Theory]
@@ -59,6 +72,8 @@ public sealed class SelectionTests
     {
         var selection = Selection.Parse("dbo.Orders,dbo.Nope", "ghost");
 
-        Assert.Equal(["schema [ghost]", "table [dbo].[Nope]"], selection.Unmatched([new ObjectName("dbo", "Orders")]));
+        Assert.Equal(["schema [ghost]", "table [dbo].[Nope]"], selection.Unmatched(Tables));
     }
+
+    private static readonly Comparer<ObjectName> ByName = Comparer<ObjectName>.Create((a, b) => string.CompareOrdinal(a.ToString(), b.ToString()));
 }

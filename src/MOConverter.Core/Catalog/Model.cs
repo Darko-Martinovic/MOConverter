@@ -1,17 +1,12 @@
 namespace MOConverter.Catalog;
 
-/// <summary>A schema-qualified name, compared without regard to case as SQL Server's default collations do.</summary>
+/// <summary>
+/// A schema-qualified name, exactly as the catalog spells it: a database with a case-sensitive
+/// collation can have both dbo.Orders and dbo.orders.
+/// </summary>
 public sealed record ObjectName(string Schema, string Name)
 {
     public override string ToString() => $"{Quote(Schema)}.{Quote(Name)}";
-
-    public bool Equals(ObjectName? other) =>
-        other is not null
-        && string.Equals(Schema, other.Schema, StringComparison.OrdinalIgnoreCase)
-        && string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase);
-
-    public override int GetHashCode() =>
-        HashCode.Combine(Schema.ToUpperInvariant(), Name.ToUpperInvariant());
 
     public static string Quote(string name) => $"[{name.Replace("]", "]]")}]";
 }
@@ -41,6 +36,7 @@ public sealed record ServerFacts(
 /// <param name="BaseType">The system type underneath: the same as <paramref name="Type"/> for system types, null for CLR types.</param>
 /// <param name="TypeSchema">The schema of an alias or CLR type (<c>sys</c> for the built-in ones).</param>
 /// <param name="MaxLength">Bytes, as in sys.columns: -1 for max, twice the characters for nchar and nvarchar.</param>
+/// <param name="IdentitySeed">As text, since a decimal(38,0) seed can be larger than .NET's decimal.</param>
 public sealed record ColumnInfo(
     string Name,
     string Type,
@@ -53,8 +49,8 @@ public sealed record ColumnInfo(
     int Scale,
     bool IsNullable,
     bool IsIdentity = false,
-    decimal? IdentitySeed = null,
-    decimal? IdentityIncrement = null,
+    string? IdentitySeed = null,
+    string? IdentityIncrement = null,
     bool IsComputed = false,
     string? ComputedDefinition = null,
     bool IsPersisted = false,
@@ -66,18 +62,21 @@ public sealed record ColumnInfo(
 public sealed record IndexColumn(string Name, bool IsDescending);
 
 /// <param name="Kind">sys.indexes.type_desc: CLUSTERED, NONCLUSTERED, XML, SPATIAL, CLUSTERED COLUMNSTORE, NONCLUSTERED COLUMNSTORE.</param>
+/// <param name="Filter">The filter's text: null when there is none, or when it isn't visible to this login.</param>
 public sealed record IndexInfo(
     string Name,
     string Kind,
     bool IsPrimaryKey,
     bool IsUnique,
     bool IsUniqueConstraint,
+    bool HasFilter,
     string? Filter,
     bool IsDisabled,
     IReadOnlyList<IndexColumn> Keys,
     IReadOnlyList<string> Included);
 
 /// <param name="DeleteAction">sys.foreign_keys' action: NO_ACTION, CASCADE, SET_NULL or SET_DEFAULT.</param>
+/// <param name="ReferencesPrimaryKey">False when the key references a unique constraint or index instead.</param>
 public sealed record ForeignKeyInfo(
     string Name,
     ObjectName Table,
@@ -85,6 +84,7 @@ public sealed record ForeignKeyInfo(
     string DeleteAction,
     string UpdateAction,
     bool IsDisabled,
+    bool ReferencesPrimaryKey,
     IReadOnlyList<(string Column, string Referenced)> Columns);
 
 public sealed record CheckInfo(string Name, string Definition, bool IsDisabled);

@@ -15,8 +15,11 @@ public static class TableRules
 
     private static IEnumerable<Finding> TableKind(TableInfo table)
     {
-        if (!table.Indexes.Any(i => i.IsPrimaryKey))
+        var primaryKey = table.Indexes.FirstOrDefault(i => i.IsPrimaryKey);
+        if (primaryKey is null)
             yield return new(RuleCatalogue.NoPrimaryKey, "it has no primary key");
+        else if (primaryKey.IsDisabled)
+            yield return new(RuleCatalogue.NoPrimaryKey, $"its primary key {ObjectName.Quote(primaryKey.Name)} is disabled");
         if (table.TemporalType == 2)
             yield return new(RuleCatalogue.Temporal, "it is system-versioned");
         if (table.TemporalType == 1)
@@ -59,9 +62,13 @@ public static class TableRules
                 yield break;
             }
 
+            // The expression stays, so its result must be a type memory-optimized tables accept as it is
+            var result = TypeMap.Map(column);
             var unsupported = Expressions.UnsupportedInValue(column.ComputedDefinition);
             if (unsupported.Count > 0)
                 yield return new(RuleCatalogue.ComputedUnsupported, $"{name} AS {column.ComputedDefinition} uses {Expressions.Describe(unsupported)}");
+            else if (result.Rule is not null)
+                yield return new(RuleCatalogue.ComputedUnsupported, $"{name} AS {column.ComputedDefinition} gives {result.Source}, which memory-optimized tables don't accept as it is");
             else if (!column.IsPersisted && table.Indexes.Any(i => i.Keys.Any(k => k.Name == column.Name)))
                 yield return new(RuleCatalogue.ComputedIndexPersisted, $"{name} is indexed, so it becomes PERSISTED");
             yield break;
@@ -77,13 +84,17 @@ public static class TableRules
         if (column.IsSparse)
             yield return new(RuleCatalogue.Sparse, $"{name} is no longer SPARSE");
 
-        if (column.IsIdentity && (column.IdentitySeed != 1 || column.IdentityIncrement != 1))
+        if (column.IsIdentity && (column.IdentitySeed != "1" || column.IdentityIncrement != "1"))
         {
             yield return new(RuleCatalogue.IdentitySeed,
                 $"{name} is IDENTITY({column.IdentitySeed},{column.IdentityIncrement}): it becomes IDENTITY(1,1), and new values count up by 1 from the highest");
         }
 
-        if (column.DefaultDefinition is not null)
+        if (column.DefaultName is not null && column.DefaultDefinition is null)
+        {
+            yield return new(RuleCatalogue.DefinitionHidden, $"{name}'s default {ObjectName.Quote(column.DefaultName)} isn't visible");
+        }
+        else if (column.DefaultDefinition is not null)
         {
             var unsupported = Expressions.UnsupportedInValue(column.DefaultDefinition);
             if (unsupported.Count > 0)
@@ -118,7 +129,9 @@ public static class TableRules
                     break;
             }
 
-            if (index.Filter is not null && index.IsUnique)
+            if (index.HasFilter && index.Filter is null)
+                yield return new(RuleCatalogue.DefinitionHidden, $"index {name}'s filter isn't visible");
+            else if (index.Filter is not null && index.IsUnique)
                 yield return new(RuleCatalogue.UniqueFilteredIndex, $"unique index {name} is filtered WHERE {index.Filter}");
             else if (index.Filter is not null)
                 yield return new(RuleCatalogue.FilteredIndex, $"index {name} loses its filter WHERE {index.Filter}");
@@ -159,6 +172,9 @@ public static class TableRules
             yield return new(RuleCatalogue.DisabledObject, $"foreign key {name} is disabled, and isn't carried over");
             yield break;
         }
+
+        if (!key.ReferencesPrimaryKey)
+            yield return new(RuleCatalogue.ForeignKeyTarget, $"foreign key {name} references a unique key of {key.Referenced}, not its primary key");
 
         var actions = new[] { ("ON DELETE", key.DeleteAction), ("ON UPDATE", key.UpdateAction) }
             .Where(a => a.Item2 != "NO_ACTION")

@@ -40,10 +40,12 @@ public static class Assessor
     public static Assessment Assess(DatabaseModel model, Selection selection)
     {
         var notes = ServerNotes(model.Server).ToList();
-        notes.AddRange(selection.Unmatched(model.Tables.Select(t => t.Name).ToList())
+        var names = model.Tables.Select(t => t.Name).ToList();
+        notes.AddRange(selection.Unmatched(names)
             .Select(name => new Finding(RuleCatalogue.SelectionUnmatched, $"no {name} in {ObjectName.Quote(model.Server.Database)}")));
 
-        var selected = model.Tables.Where(t => selection.Includes(t.Name)).ToList();
+        var chosen = selection.Resolve(names);
+        var selected = model.Tables.Where(t => chosen.Contains(t.Name)).ToList();
         var findings = selected.Where(t => !t.IsMemoryOptimized)
             .ToDictionary(t => t.Name, t => TableRules.Check(t, model.ForeignKeys).ToList());
         var estimates = selected.ToDictionary(t => t.Name, EstimateBytes);

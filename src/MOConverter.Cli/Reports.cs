@@ -97,7 +97,8 @@ public static class Reports
             text.AppendLine($"- Already memory-optimized, left out: {string.Join(", ", assessment.AlreadyMemoryOptimized)}");
         return text.ToString();
 
-        static string Cell(string value) => value.Replace("|", "\\|");
+        // A definition can span lines, which would end the table row
+        static string Cell(string value) => value.Replace("|", "\\|").Replace("\r\n", "<br>").Replace('\r', '\n').Replace("\n", "<br>");
     }
 
     private static object FindingView(Finding finding) =>

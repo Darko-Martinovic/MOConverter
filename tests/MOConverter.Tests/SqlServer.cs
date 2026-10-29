@@ -14,13 +14,15 @@ public sealed class SqlServerCollection : ICollectionFixture<SqlServer>
 
 /// <summary>
 /// SQL Server in a container: 2025 unless MSSQL_IMAGE names another image, as CI does for 2022.
-/// It has two databases: Cases, built from Fixtures/cases*.sql, and Probe, which has a
-/// memory-optimized filegroup for trying what memory-optimized tables accept.
+/// It has three databases: Cases, built from Fixtures/cases*.sql; Probe, which has a
+/// memory-optimized filegroup for trying what memory-optimized tables accept; and
+/// CaseSensitive, with a case-sensitive collation and both dbo.Orders and dbo.orders.
 /// </summary>
 public sealed partial class SqlServer : IAsyncLifetime
 {
     public const string Cases = "Cases";
     public const string Probe = "Probe";
+    public const string CaseSensitive = "CaseSensitive";
 
     private static readonly string Image =
         Environment.GetEnvironmentVariable("MSSQL_IMAGE") ?? "mcr.microsoft.com/mssql/server:2025-latest";
@@ -51,6 +53,12 @@ public sealed partial class SqlServer : IAsyncLifetime
             ALTER DATABASE {Probe} ADD FILEGROUP mo CONTAINS MEMORY_OPTIMIZED_DATA;
             DECLARE @path nvarchar(400) = CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS nvarchar(400)) + N'{Probe}_mo';
             EXEC (N'ALTER DATABASE {Probe} ADD FILE (NAME = ''{Probe}_mo'', FILENAME = ''' + @path + N''') TO FILEGROUP mo;');
+            """);
+
+        await ExecuteAsync("master", $"CREATE DATABASE {CaseSensitive} COLLATE Latin1_General_100_CS_AS;");
+        await ExecuteAsync(CaseSensitive, """
+            CREATE TABLE dbo.Orders (Id int PRIMARY KEY);
+            CREATE TABLE dbo.orders (Id int NOT NULL, CONSTRAINT FK_orders_Orders FOREIGN KEY (Id) REFERENCES dbo.Orders (Id));
             """);
 
         await RunScriptAsync(Cases, Fixture("cases.sql"));

@@ -92,8 +92,9 @@ CREATE TABLE cases.Checks (
 );
 CREATE TABLE cases.Defaults (Id int PRIMARY KEY, Num bigint NULL DEFAULT NEXT VALUE FOR dbo.Numbers, Host nvarchar(128) NULL DEFAULT HOST_NAME());
 
--- Lossy: IDENTITY other than (1,1)
+-- Lossy: IDENTITY other than (1,1), with a seed too big for .NET's decimal
 CREATE TABLE cases.IdentitySeed (Id int IDENTITY(100, 5) PRIMARY KEY, Name nvarchar(10) NULL);
+CREATE TABLE cases.BigSeed (Id decimal(38, 0) IDENTITY(1000000000000000000000000000000, 1) PRIMARY KEY);
 
 -- Lossy: cascading foreign keys
 CREATE TABLE cases.Parent (Id int PRIMARY KEY);
@@ -111,6 +112,10 @@ ALTER TABLE cases.Tracked ENABLE CHANGE_TRACKING;
 CREATE TABLE cases.NoPrimaryKey (Id int NOT NULL, Name nvarchar(10) NULL);
 CREATE TABLE cases.Variant (Id int PRIMARY KEY, Value sql_variant NULL);
 CREATE TABLE cases.ComputedUpper (Id int PRIMARY KEY, Name varchar(10) NULL, Shout AS UPPER(Name));
+CREATE TABLE cases.ComputedVariant (Id int PRIMARY KEY, Anything AS CONVERT(sql_variant, Id));
+-- Blocked: a key to a unique constraint rather than the primary key, and the table it references
+CREATE TABLE cases.UniqueParent (Id int PRIMARY KEY, Code int NOT NULL CONSTRAINT UQ_UniqueParent_Code UNIQUE);
+CREATE TABLE cases.UniqueChild (Id int PRIMARY KEY, Code int NULL CONSTRAINT FK_UniqueChild_Code REFERENCES cases.UniqueParent (Code));
 CREATE TABLE cases.UniqueFiltered (Id int PRIMARY KEY, Email varchar(50) NULL);
 CREATE UNIQUE INDEX UX_UniqueFiltered_Email ON cases.UniqueFiltered (Email) WHERE Email IS NOT NULL;
 CREATE TABLE cases.ColumnSet (Id int PRIMARY KEY, A int SPARSE NULL, Everything xml COLUMN_SET FOR ALL_SPARSE_COLUMNS);

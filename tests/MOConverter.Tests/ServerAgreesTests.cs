@@ -179,6 +179,16 @@ public sealed class ServerAgreesTests(SqlServer server)
     }
 
     [Fact]
+    public async Task A_foreign_key_to_a_unique_key_is_refused()
+    {
+        var name = $"dbo.parent_{Guid.NewGuid():N}";
+        await server.ExecuteAsync(SqlServer.Probe,
+            $"CREATE TABLE {name} (id int NOT NULL PRIMARY KEY NONCLUSTERED, code int NOT NULL, CONSTRAINT uq_{Guid.NewGuid():N} UNIQUE NONCLUSTERED (code)) WITH (MEMORY_OPTIMIZED = ON);");
+
+        Refused(await TryAsync($"p int NULL REFERENCES {name} (code)"));
+    }
+
+    [Fact]
     public async Task A_foreign_key_to_a_disk_table_is_refused()
     {
         var name = $"dbo.disk_{Guid.NewGuid():N}";
@@ -192,7 +202,7 @@ public sealed class ServerAgreesTests(SqlServer server)
     {
         Assert.NotNull(error);
         var messages = error.Errors.Cast<Microsoft.Data.SqlClient.SqlError>().Select(e => e.Message).ToList();
-        Assert.True(messages.Any(m => m.Contains("memory optimized", StringComparison.OrdinalIgnoreCase)),
+        Assert.True(messages.Any(m => m.Replace('-', ' ').Contains("memory optimized", StringComparison.OrdinalIgnoreCase)),
             $"Refused for another reason: {string.Join(" | ", messages)}");
     }
 

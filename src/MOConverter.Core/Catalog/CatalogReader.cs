@@ -53,8 +53,8 @@ public static class CatalogReader
                 Scale: reader.GetByte(9),
                 IsNullable: reader.GetBoolean(10),
                 IsIdentity: reader.GetBoolean(11),
-                IdentitySeed: reader.IsDBNull(12) ? null : reader.GetDecimal(12),
-                IdentityIncrement: reader.IsDBNull(13) ? null : reader.GetDecimal(13),
+                IdentitySeed: NullableString(reader, 12),
+                IdentityIncrement: NullableString(reader, 13),
                 IsComputed: reader.GetBoolean(14),
                 ComputedDefinition: NullableString(reader, 15),
                 IsPersisted: reader.GetBoolean(16),
@@ -70,7 +70,7 @@ public static class CatalogReader
         {
             var index = new IndexBuilder(
                 reader.GetString(2), reader.GetString(3), reader.GetBoolean(4), reader.GetBoolean(5),
-                reader.GetBoolean(6), NullableString(reader, 7), reader.GetBoolean(8));
+                reader.GetBoolean(6), reader.GetBoolean(7), NullableString(reader, 8), reader.GetBoolean(9));
             indexes[(reader.GetInt32(0), reader.GetInt32(1))] = index;
             tables[reader.GetInt32(0)].Indexes.Add(index);
         }
@@ -86,12 +86,12 @@ public static class CatalogReader
                 index.Keys.Add(new IndexColumn(reader.GetString(2), reader.GetBoolean(3)));
         }
 
-        var keys = new Dictionary<int, (string Name, int Table, int Referenced, string Delete, string Update, bool Disabled, List<(string, string)> Columns)>();
+        var keys = new Dictionary<int, (string Name, int Table, int Referenced, string Delete, string Update, bool Disabled, bool ToPrimaryKey, List<(string, string)> Columns)>();
         await reader.NextResultAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             keys[reader.GetInt32(0)] = (reader.GetString(1), reader.GetInt32(2), reader.GetInt32(3),
-                reader.GetString(4), reader.GetString(5), reader.GetBoolean(6), []);
+                reader.GetString(4), reader.GetString(5), reader.GetBoolean(6), reader.GetInt32(7) == 1, []);
         }
 
         await reader.NextResultAsync(cancellationToken);
@@ -101,7 +101,7 @@ public static class CatalogReader
         foreach (var key in keys.Values)
         {
             foreignKeys.Add(new ForeignKeyInfo(key.Name, tables[key.Table].Name, tables[key.Referenced].Name,
-                key.Delete, key.Update, key.Disabled, key.Columns));
+                key.Delete, key.Update, key.Disabled, key.ToPrimaryKey, key.Columns));
         }
 
         await reader.NextResultAsync(cancellationToken);
@@ -189,7 +189,8 @@ public static class CatalogReader
                    MAX(CASE WHEN pa.data_compression_desc IN ('NONE', 'COLUMNSTORE') THEN NULL ELSE pa.data_compression_desc END) AS compression,
                    (SELECT SUM(CAST(au.used_pages AS bigint))
                     FROM sys.partitions p2
-                    JOIN sys.allocation_units au ON au.container_id = p2.partition_id
+                    -- In-row and row-overflow units belong to the hobt, LOB units to the partition
+                    JOIN sys.allocation_units au ON au.container_id = CASE WHEN au.type IN (1, 3) THEN p2.hobt_id ELSE p2.partition_id END
                     WHERE p2.object_id = t.object_id AND p2.index_id IN (0, 1)) AS pages
             FROM sys.partitions pa
             WHERE pa.object_id = t.object_id AND pa.index_id IN (0, 1)) p
@@ -197,7 +198,7 @@ public static class CatalogReader
 
         SELECT c.object_id, c.name, ty.name, bt.name, SCHEMA_NAME(ty.schema_id), ty.is_user_defined, ty.is_assembly_type,
                c.max_length, c.precision, c.scale, c.is_nullable, c.is_identity,
-               CAST(ic.seed_value AS decimal(38, 0)), CAST(ic.increment_value AS decimal(38, 0)),
+               CONVERT(nvarchar(40), ic.seed_value), CONVERT(nvarchar(40), ic.increment_value),
                c.is_computed, cc.definition, ISNULL(cc.is_persisted, 0), c.is_sparse, c.is_column_set,
                dc.name, dc.definition
         FROM sys.columns c
@@ -210,7 +211,7 @@ public static class CatalogReader
         ORDER BY c.object_id, c.column_id;
 
         SELECT i.object_id, i.index_id, i.name, i.type_desc, i.is_primary_key, i.is_unique, i.is_unique_constraint,
-               i.filter_definition, i.is_disabled
+               i.has_filter, i.filter_definition, i.is_disabled
         FROM sys.indexes i
         JOIN sys.tables t ON t.object_id = i.object_id AND t.is_ms_shipped = 0
         WHERE i.index_id > 0 AND i.is_hypothetical = 0
@@ -226,7 +227,10 @@ public static class CatalogReader
         ORDER BY ic.object_id, ic.index_id, ic.key_ordinal, ic.index_column_id;
 
         SELECT fk.object_id, fk.name, fk.parent_object_id, fk.referenced_object_id,
-               fk.delete_referential_action_desc, fk.update_referential_action_desc, fk.is_disabled
+               fk.delete_referential_action_desc, fk.update_referential_action_desc, fk.is_disabled,
+               CASE WHEN EXISTS (SELECT 1 FROM sys.indexes ri
+                                 WHERE ri.object_id = fk.referenced_object_id AND ri.index_id = fk.key_index_id AND ri.is_primary_key = 1)
+                    THEN 1 ELSE 0 END
         FROM sys.foreign_keys fk
         JOIN sys.tables t ON t.object_id = fk.parent_object_id AND t.is_ms_shipped = 0;
 
@@ -279,12 +283,12 @@ public static class CatalogReader
             IsFileTable, IsReplicated, IsChangeTracked, IsTrackedByCdc, HasFullTextIndex);
     }
 
-    private sealed class IndexBuilder(string name, string kind, bool isPrimaryKey, bool isUnique, bool isUniqueConstraint, string? filter, bool isDisabled)
+    private sealed class IndexBuilder(string name, string kind, bool isPrimaryKey, bool isUnique, bool isUniqueConstraint, bool hasFilter, string? filter, bool isDisabled)
     {
         public string Kind { get; } = kind;
         public List<IndexColumn> Keys { get; } = [];
         public List<string> Included { get; } = [];
 
-        public IndexInfo Build() => new(name, Kind, isPrimaryKey, isUnique, isUniqueConstraint, filter, isDisabled, Keys, Included);
+        public IndexInfo Build() => new(name, Kind, isPrimaryKey, isUnique, isUniqueConstraint, hasFilter, filter, isDisabled, Keys, Included);
     }
 }

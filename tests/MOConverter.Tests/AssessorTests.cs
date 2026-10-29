@@ -12,14 +12,20 @@ public sealed class AssessorTests
         "Sales", 170, HasMemoryOptimizedFilegroup: false, MemoryLimitBytes: 1L << 30, "test");
 
     private static TableInfo Table(string name, long rows = 10, long dataBytes = 8192, bool primaryKey = true,
-        bool fullText = false, bool cdc = false, bool memoryOptimized = false) =>
+        bool fullText = false, bool cdc = false, bool memoryOptimized = false, IReadOnlyList<IndexInfo>? indexes = null,
+        IReadOnlyList<ColumnInfo>? columns = null) =>
         new(new ObjectName("dbo", name), rows, dataBytes,
-            [new ColumnInfo("Id", "int", "int", "sys", false, false, 4, 10, 0, IsNullable: false)],
-            primaryKey ? [new IndexInfo($"PK_{name}", "CLUSTERED", true, true, false, null, false, [new IndexColumn("Id", false)], [])] : [],
+            columns ?? [Id],
+            indexes ?? (primaryKey ? [PrimaryKey(name)] : []),
             [], [], memoryOptimized, HasFullTextIndex: fullText, IsTrackedByCdc: cdc);
 
+    private static readonly ColumnInfo Id = new("Id", "int", "int", "sys", false, false, 4, 10, 0, IsNullable: false);
+
+    private static IndexInfo PrimaryKey(string table, bool disabled = false) =>
+        new($"PK_{table}", "CLUSTERED", true, true, false, false, null, disabled, [new IndexColumn("Id", false)], []);
+
     private static ForeignKeyInfo Key(string from, string to) =>
-        new($"FK_{from}_{to}", new ObjectName("dbo", from), new ObjectName("dbo", to), "NO_ACTION", "NO_ACTION", false, [("Id", "Id")]);
+        new($"FK_{from}_{to}", new ObjectName("dbo", from), new ObjectName("dbo", to), "NO_ACTION", "NO_ACTION", false, true, [("Id", "Id")]);
 
     private static Assessment.Assessment Assess(IReadOnlyList<TableInfo> tables, IReadOnlyList<ForeignKeyInfo>? keys = null,
         ServerFacts? server = null, Selection? selection = null) =>
@@ -124,6 +130,38 @@ public sealed class AssessorTests
 
         Assert.Equal(Outcome.Ready, assessment.Outcome);
         Assert.Contains(assessment.Notes, n => n.Rule == RuleCatalogue.MemoryNote && n.Message == "memory not checked");
+    }
+
+    [Fact]
+    public void A_disabled_primary_key_blocks_the_table()
+    {
+        var assessment = Assess([Table("A", indexes: [PrimaryKey("A", disabled: true)])]);
+
+        var table = assessment.Tables.Single();
+        Assert.Equal(Outcome.Blocked, table.Outcome);
+        Assert.Contains(table.Findings, f => f.Rule == RuleCatalogue.NoPrimaryKey && f.Message == "its primary key [PK_A] is disabled");
+    }
+
+    [Fact]
+    public void A_filter_the_login_cant_see_blocks_the_table()
+    {
+        // filter_definition is null both without a filter and when it's hidden; has_filter tells them apart
+        var hidden = new IndexInfo("IX_A", "NONCLUSTERED", false, true, false, true, null, false, [new IndexColumn("Id", false)], []);
+
+        var table = Assess([Table("A", indexes: [PrimaryKey("A"), hidden])]).Tables.Single();
+
+        Assert.Equal(Outcome.Blocked, table.Outcome);
+        Assert.Contains(table.Findings, f => f.Rule == RuleCatalogue.DefinitionHidden && f.Message == "index [IX_A]'s filter isn't visible");
+    }
+
+    [Fact]
+    public void A_default_the_login_cant_see_blocks_the_table()
+    {
+        var column = Id with { Name = "Created", DefaultName = "DF_Created", DefaultDefinition = null };
+
+        var table = Assess([Table("A", columns: [Id, column])]).Tables.Single();
+
+        Assert.Contains(table.Findings, f => f.Rule == RuleCatalogue.DefinitionHidden && f.Message == "[Created]'s default [DF_Created] isn't visible");
     }
 
     [Fact]
