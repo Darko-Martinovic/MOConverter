@@ -51,6 +51,7 @@ public sealed class ScriptTests(SqlServer server)
         "Ready", "UpperLimit", "ManyIndexes", "Columnstore", "Order Details", "Parent", "AliasTypes", "OldLobTypes",
         "Indexes", "ComputedIndexed", "Sparse", "Partitioned", "Compressed", "Disabled", "LossyTypes", "AliasLossy",
         "Checks", "Defaults", "IdentitySeed", "BigSeed", "Child", "Audited", "Tracked",
+        "WideIndex", "WidePrimaryKey", "Utf8", "ColumnstoreLimits", "WideUnique", "ComputedOverLossy", "CastCheck", "VersionKey",
     ];
 
     public static TheoryData<string> Convertible => [.. ConvertibleNames];
@@ -121,7 +122,10 @@ public sealed class ScriptTests(SqlServer server)
         Assert.Equal(fromKey.Name, toKey.Name);
         Assert.Equal(fromKey.Keys.Select(k => k.Name), toKey.Keys.Select(k => k.Name));
 
-        var kept = from.Indexes.Where(i => !i.IsPrimaryKey && !i.IsDisabled && i.Kind is "CLUSTERED" or "NONCLUSTERED" or "CLUSTERED COLUMNSTORE");
+        // Too wide for a range index, or a columnstore index over nvarchar(max)
+        string[] dropped = ["IX_WideIndex_Code", "UQ_WideUnique_Note", "CCI_ColumnstoreLimits"];
+        var kept = from.Indexes.Where(i => !i.IsPrimaryKey && !i.IsDisabled && i.Kind is "CLUSTERED" or "NONCLUSTERED" or "CLUSTERED COLUMNSTORE"
+            && !dropped.Contains(i.Name));
         Assert.Equal(kept.Select(i => i.Name).Order(), to.Indexes.Where(i => !i.IsPrimaryKey).Select(i => i.Name).Order());
         Assert.All(to.Indexes.Where(i => i.Kind != "CLUSTERED COLUMNSTORE"), i => Assert.Null(i.Filter));
 
@@ -169,6 +173,25 @@ public sealed class ScriptTests(SqlServer server)
 
         Assert.Empty(assessment.Tables);
         Assert.Equal(ExpectedNames.Count(), assessment.AlreadyMemoryOptimized.Count);
+    }
+
+    [Fact]
+    public async Task A_primary_key_too_wide_for_a_range_index_becomes_a_hash_index()
+    {
+        await ConvertedAsync();
+
+        Assert.Equal(1L, Convert.ToInt64(await server.ScalarAsync(Target,
+            "SELECT COUNT(*) FROM sys.hash_indexes WHERE object_id = OBJECT_ID(N'cases.WidePrimaryKey') AND is_primary_key = 1;")));
+    }
+
+    [Fact]
+    public async Task A_rowversion_primary_key_becomes_binary_not_null()
+    {
+        var (_, target, _) = await ConvertedAsync();
+
+        var column = target.Tables.Single(t => t.Name == new ObjectName("cases", "VersionKey")).Columns.Single(c => c.Name == "V");
+
+        Assert.Equal(("binary", false), (column.Type, column.IsNullable));
     }
 
     [Fact]

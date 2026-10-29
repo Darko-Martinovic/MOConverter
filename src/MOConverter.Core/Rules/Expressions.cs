@@ -36,7 +36,7 @@ public static class Expressions
     /// <summary>Says what was found, telling apart what is known to fail from what isn't known to work.</summary>
     public static string Describe(IReadOnlyList<string> unsupported)
     {
-        var known = unsupported.Where(KnownUnsupported.Contains).ToList();
+        var known = unsupported.Where(u => KnownUnsupported.Contains(u) || u.StartsWith("CAST to ", StringComparison.Ordinal) || u.StartsWith("CONVERT to ", StringComparison.Ordinal)).ToList();
         var unknown = unsupported.Except(known).ToList();
         var parts = new List<string>();
         if (known.Count > 0)
@@ -44,6 +44,27 @@ public static class Expressions
         if (unknown.Count > 0)
             parts.Add($"{string.Join(", ", unknown)}, which isn't known to work in memory-optimized tables");
         return string.Join("; and ", parts);
+    }
+
+    /// <summary>The columns a scalar expression reads, by name.</summary>
+    public static IReadOnlySet<string> ColumnsIn(string definition)
+    {
+        var fragment = new TSql170Parser(initialQuotedIdentifiers: true).ParseExpression(new StringReader(definition), out var errors);
+        var columns = new ColumnFinder();
+        if (fragment is not null && errors.Count == 0)
+            fragment.Accept(columns);
+        return columns.Found;
+    }
+
+    private sealed class ColumnFinder : TSqlFragmentVisitor
+    {
+        public HashSet<string> Found { get; } = new(StringComparer.Ordinal);
+
+        public override void Visit(ColumnReferenceExpression node)
+        {
+            if (node.MultiPartIdentifier is { Count: > 0 } name)
+                Found.Add(name.Identifiers[^1].Value);
+        }
     }
 
     private static List<string> Find(string definition, bool condition)
@@ -79,6 +100,18 @@ public static class Expressions
         public override void Visit(RightFunctionCall node) => Found.Add("RIGHT");
 
         public override void Visit(LikePredicate node) => Found.Add("LIKE");
+
+        // CAST and CONVERT work, but not to a type memory-optimized tables refuse
+        public override void Visit(CastCall node) => Cast("CAST", node.DataType);
+
+        public override void Visit(ConvertCall node) => Cast("CONVERT", node.DataType);
+
+        private void Cast(string call, DataTypeReference type)
+        {
+            var name = type.Name.BaseIdentifier.Value;
+            if (!TypeMap.Supported.Contains(name))
+                Found.Add($"{call} to {name.ToLowerInvariant()}");
+        }
 
         public override void Visit(TryCastCall node) => Found.Add("TRY_CAST");
 

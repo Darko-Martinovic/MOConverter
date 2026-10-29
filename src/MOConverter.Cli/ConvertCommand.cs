@@ -76,7 +76,7 @@ public sealed class ConvertCommand(IAnsiConsole console) : AsyncCommand<ConvertS
         }
 
         var assessment = Assessor.Assess(model, settings.Selection);
-        if (settings.Plan(console, assessment, "Nothing done", out var exitCode) is not { } plan)
+        if (settings.Plan(console, model, assessment, "Nothing done", out var exitCode) is not { } plan)
             return exitCode;
 
         console.MarkupLineInterpolated($"Converting {plan.Tables.Count} {(plan.Tables.Count == 1 ? "table" : "tables")} ({ConversionSettings.Counts(assessment)}) into {ObjectName.Quote(settings.TargetDatabase!)}.");

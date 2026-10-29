@@ -88,6 +88,26 @@ public sealed class TypeMapTests
         Assert.Equal(RuleCatalogue.TypeUnsupported, TypeMap.Map(column).Rule);
     }
 
+    [Theory]
+    [InlineData("varchar", 20, "nvarchar(20)")]
+    [InlineData("char", 10, "nchar(10)")]
+    [InlineData("varchar", 8000, "nvarchar(max)")]
+    [InlineData("varchar", -1, "nvarchar(max)")]
+    public void Utf8_char_types_become_unicode(string type, int length, string target)
+    {
+        var column = System(type, length) with { Collation = "Latin1_General_100_CI_AS_SC_UTF8" };
+
+        var mapping = TypeMap.Map(column);
+
+        Assert.Equal((RuleCatalogue.Utf8Collation, target), (mapping.Rule, mapping.Target));
+    }
+
+    [Fact]
+    public void Utf8_nvarchar_stays()
+    {
+        Assert.Null(TypeMap.Map(System("nvarchar", 40) with { Collation = "Latin1_General_100_CI_AS_SC_UTF8" }).Rule);
+    }
+
     [Fact]
     public void A_vector_says_its_dimensions()
     {

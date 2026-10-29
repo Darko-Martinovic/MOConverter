@@ -29,18 +29,38 @@ public static class TypeMap
 
     public static TypeMapping Map(ColumnInfo column)
     {
-        if (column.IsAliasType)
-        {
-            var source = $"{column.TypeSchema}.{column.Type}";
-            var underlying = MapSystem(column with { Type = column.BaseType!, IsAliasType = false });
-            return underlying.Outcome switch
-            {
-                Outcome.Ready or Outcome.Fixed => new TypeMapping(RuleCatalogue.AliasType, source, underlying.Target, $"the alias type's base type is {underlying.Source}"),
-                _ => underlying with { Source = $"{source} ({underlying.Source})" },
-            };
-        }
+        var mapping = column.IsAliasType ? MapAlias(column) : MapSystem(column);
+        return IsUtf8(column.Collation) && mapping.Outcome is Outcome.Ready or Outcome.Fixed && ToUnicode(mapping.Target) is { } unicode
+            ? new TypeMapping(RuleCatalogue.Utf8Collation, mapping.Source, unicode,
+                $"memory-optimized tables refuse char and varchar with a UTF-8 collation; {unicode} keeps every character")
+            : mapping;
+    }
 
-        return MapSystem(column);
+    public static bool IsUtf8(string? collation) => collation?.Contains("_UTF8", StringComparison.OrdinalIgnoreCase) == true;
+
+    private static TypeMapping MapAlias(ColumnInfo column)
+    {
+        var source = $"{column.TypeSchema}.{column.Type}";
+        var underlying = MapSystem(column with { Type = column.BaseType!, IsAliasType = false });
+        return underlying.Outcome switch
+        {
+            Outcome.Ready or Outcome.Fixed => new TypeMapping(RuleCatalogue.AliasType, source, underlying.Target, $"the alias type's base type is {underlying.Source}"),
+            _ => underlying with { Source = $"{source} ({underlying.Source})" },
+        };
+    }
+
+    /// <summary>char(n) as nchar(n), varchar(n) as nvarchar(n): n bytes of UTF-8 are at most n characters.</summary>
+    private static string? ToUnicode(string target)
+    {
+        if (!target.StartsWith("char(", StringComparison.Ordinal) && !target.StartsWith("varchar(", StringComparison.Ordinal))
+            return null;
+
+        var open = target.IndexOf('(');
+        var length = target[(open + 1)..^1];
+        var kind = target[..open];
+        return length == "max" || int.Parse(length, System.Globalization.CultureInfo.InvariantCulture) > 4000
+            ? "nvarchar(max)"
+            : $"n{kind}({length})";
     }
 
     private static TypeMapping MapSystem(ColumnInfo column)

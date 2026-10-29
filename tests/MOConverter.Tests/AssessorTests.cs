@@ -48,11 +48,12 @@ public sealed class AssessorTests
     }
 
     [Fact]
-    public void A_key_to_a_memory_optimized_table_is_fine()
+    public void A_key_to_a_memory_optimized_table_blocks_it_since_that_table_isnt_copied()
     {
         var assessment = Assess([Table("A"), Table("M", memoryOptimized: true)], [Key("A", "M")]);
 
-        Assert.Equal(Outcome.Ready, OutcomeOf(assessment, "A"));
+        Assert.Equal(Outcome.Blocked, OutcomeOf(assessment, "A"));
+        Assert.Contains(assessment.Tables.Single().Findings, f => f.Message.EndsWith("which is memory-optimized already, and isn't copied into the new database"));
         Assert.Equal([new ObjectName("dbo", "M")], assessment.AlreadyMemoryOptimized);
     }
 

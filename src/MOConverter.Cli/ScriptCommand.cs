@@ -39,6 +39,12 @@ public class ConversionSettings : SelectionSettings
         if (string.IsNullOrWhiteSpace(TargetDatabase))
             return ValidationResult.Error("Name the database to create the tables in, with --target-db.");
 
+        // The memory-optimized filegroup and its container folder are named after the database, plus _mo
+        if (TargetDatabase.Length > 125)
+            return ValidationResult.Error("The target database's name can have 125 characters at most.");
+        if (TargetDatabase.IndexOfAny(['\\', '/', ':', '*', '?', '"', '<', '>', '|']) >= 0)
+            return ValidationResult.Error("The target database's name can't have \\ / : * ? \" < > or |: it names a folder too.");
+
         try
         {
             Selection.Parse(HashPrimaryKeys, null);
@@ -62,7 +68,7 @@ public class ConversionSettings : SelectionSettings
     /// <summary>
     /// The tables to convert and how, after saying why not when they can't be: an exit code then.
     /// </summary>
-    public (IReadOnlyList<ObjectName> Tables, ScriptOptions Options)? Plan(IAnsiConsole console, Assessment.Assessment assessment, string nothing, out int exitCode)
+    public (IReadOnlyList<ObjectName> Tables, ScriptOptions Options)? Plan(IAnsiConsole console, DatabaseModel model, Assessment.Assessment assessment, string nothing, out int exitCode)
     {
         exitCode = 0;
         if (assessment.Outcome == Outcome.Blocked)
@@ -107,9 +113,23 @@ public class ConversionSettings : SelectionSettings
             return null;
         }
 
-        return (tables, new ScriptOptions(TargetDatabase!,
+        var options = new ScriptOptions(TargetDatabase!,
             hash.IsAll ? new HashSet<ObjectName>() : hash.Resolve(tables),
-            schemaOnly.IsAll ? new HashSet<ObjectName>() : schemaOnly.Resolve(tables)));
+            schemaOnly.IsAll ? new HashSet<ObjectName>() : schemaOnly.Resolve(tables));
+
+        // A durable table's rows would point at nothing after a restart
+        var durableToSchemaOnly = model.ForeignKeys
+            .Where(k => !k.IsDisabled && tables.Contains(k.Table) && !options.SchemaOnly.Contains(k.Table) && options.SchemaOnly.Contains(k.Referenced))
+            .Select(k => $"{k.Table} ({ObjectName.Quote(k.Name)}) references {k.Referenced}")
+            .ToList();
+        if (durableToSchemaOnly.Count > 0)
+        {
+            console.MarkupLineInterpolated($"[red]A durable table can't reference a SCHEMA_ONLY one:[/] {string.Join("; ", durableToSchemaOnly)}. Make both SCHEMA_ONLY, or neither.");
+            exitCode = 1;
+            return null;
+        }
+
+        return (tables, options);
     }
 
     public static string Counts(Assessment.Assessment assessment) =>
@@ -142,10 +162,18 @@ public sealed class ScriptCommand(IAnsiConsole console) : AsyncCommand<ScriptSet
         }
 
         var assessment = Assessor.Assess(model, settings.Selection);
-        if (settings.Plan(console, assessment, "Nothing written", out var exitCode) is not { } plan)
+        if (settings.Plan(console, model, assessment, "Nothing written", out var exitCode) is not { } plan)
             return exitCode;
 
-        await File.WriteAllTextAsync(settings.Out!, Scripter.Script(model, plan.Tables, plan.Options), cancellationToken);
+        try
+        {
+            await File.WriteAllTextAsync(settings.Out!, Scripter.Script(model, plan.Tables, plan.Options), cancellationToken);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            console.MarkupLineInterpolated($"[red]Couldn't write {settings.Out}:[/] {e.Message}");
+            return 1;
+        }
 
         console.MarkupLineInterpolated($"[green]Wrote {settings.Out}:[/] {plan.Tables.Count} {(plan.Tables.Count == 1 ? "table" : "tables")} ({ConversionSettings.Counts(assessment)}) in {ObjectName.Quote(settings.TargetDatabase!)}.");
         console.MarkupLine("Review it, and run it on the server. It creates empty tables: [bold]moconverter convert[/] copies the data.");

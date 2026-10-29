@@ -123,8 +123,29 @@ public sealed class CliTests(SqlServer server)
         Assert.Contains("--schema-only: table [cases].[Parent]", result.Output);
     }
 
+    [Fact]
+    public void A_durable_table_referencing_a_schema_only_one_is_refused()
+    {
+        var result = Run("script", "--source", Source, "--tables", "cases.Parent,cases.Child", "--target-db", "Elsewhere",
+            "--out", TempFile(), "--accept-lossy", "--schema-only", "cases.Parent");
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("A durable table can't reference a SCHEMA_ONLY one", result.Output);
+    }
+
+    [Fact]
+    public void A_file_that_cant_be_written_is_an_error()
+    {
+        var result = Run("script", "--source", Source, "--tables", "cases.Ready", "--target-db", "Elsewhere",
+            "--out", Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "no-such-folder", "x.sql"));
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("Couldn't write", result.Output);
+    }
+
     [Theory]
     [InlineData("Name the database to create the tables in", "--out", "x.sql")]
+    [InlineData("can't have", "--target-db", "a/b", "--out", "x.sql")]
     [InlineData("Name the file to write", "--target-db", "x")]
     [InlineData("must not be the source", "--target-db", "cases", "--out", "x.sql")]
     public void Script_arguments_are_checked(string message, params string[] args)

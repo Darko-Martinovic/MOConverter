@@ -66,11 +66,16 @@ public static class RuleCatalogue
     public static readonly Rule ChangeTracking = new("change-tracking", Outcome.Lossy, "Change tracking isn't supported on memory-optimized tables.");
     public static readonly Rule ChangeDataCapture = new("change-data-capture", Outcome.Lossy, "Change data capture isn't supported on memory-optimized tables.");
     public static readonly Rule FullText = new("full-text", Outcome.Lossy, "Full-text indexes aren't supported on memory-optimized tables.");
+    public static readonly Rule ComputedOverLossy = new("computed-over-lossy", Outcome.Lossy, "A computed column uses a column whose type changes, so its values can change.");
+    public static readonly Rule WideUniqueKey = new("wide-unique-key", Outcome.Lossy, "A unique index wider than a range index's 2500 bytes is left out, and with it the uniqueness it enforced.");
 
     // Fixed changes
     public static readonly Rule AliasType = new("alias-type", Outcome.Fixed, "Alias types aren't supported: the column gets the alias's base type.");
     public static readonly Rule OldLobType = new("old-lob-type", Outcome.Fixed, "text, ntext and image become varchar(max), nvarchar(max) and varbinary(max).");
     public static readonly Rule Sparse = new("sparse", Outcome.Fixed, "SPARSE isn't supported: the column is stored in full.");
+    public static readonly Rule Utf8Collation = new("utf8-collation", Outcome.Fixed, "char and varchar can't have a UTF-8 collation: they become nchar and nvarchar, with the same collation.");
+    public static readonly Rule WideKey = new("wide-key", Outcome.Fixed, "A range index's key can't pass 2500 bytes: a primary key becomes a hash index, another index is left out.");
+    public static readonly Rule ColumnstoreLimits = new("columnstore-limits", Outcome.Fixed, "A clustered columnstore index is left out when a column is max, a column is computed, or a row can pass 8060 bytes.");
     public static readonly Rule ComputedIndexPersisted = new("computed-index-persisted", Outcome.Fixed, "An index on a computed column needs it PERSISTED.");
     public static readonly Rule ClusteredIndex = new("clustered-index", Outcome.Fixed, "Memory-optimized tables have no clustered rowstore index: it becomes nonclustered.");
     public static readonly Rule IncludedColumns = new("included-columns", Outcome.Fixed, "Every index on a memory-optimized table covers all columns: INCLUDE is dropped.");

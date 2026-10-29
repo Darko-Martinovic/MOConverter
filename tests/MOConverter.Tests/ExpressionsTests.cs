@@ -26,6 +26,8 @@ public sealed class ExpressionsTests
     [InlineData("([a]>[dbo].[Limit]())", "LIMIT (a user-defined function or a method)")]
     [InlineData("([a]>@@SPID)", "@@SPID")]
     [InlineData("([d] AT TIME ZONE 'UTC'>getdate())", "AT TIME ZONE")]
+    [InlineData("([Moment]>CONVERT([datetimeoffset](3),'2000-01-01T00:00:00+00:00'))", "CONVERT to datetimeoffset")]
+    [InlineData("(CAST([s] AS xml) IS NOT NULL)", "CAST to xml")]
     public void Unsupported_conditions_are_named(string definition, params string[] expected)
     {
         Assert.Equal(expected, Expressions.UnsupportedInCondition(definition));
@@ -49,6 +51,12 @@ public sealed class ExpressionsTests
     public void Supported_values_pass(string definition)
     {
         Assert.Empty(Expressions.UnsupportedInValue(definition));
+    }
+
+    [Fact]
+    public void The_columns_an_expression_reads_are_found()
+    {
+        Assert.Equal(["Moment", "Price"], Expressions.ColumnsIn("(CONVERT([datetime2](3),[Moment])+[t].[Price])").Order());
     }
 
     [Fact]

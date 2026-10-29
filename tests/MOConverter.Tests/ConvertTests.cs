@@ -121,6 +121,20 @@ public sealed class ConvertTests(SqlServer server)
     }
 
     [Fact]
+    public async Task Utf8_text_keeps_every_character_as_nvarchar()
+    {
+        Assert.Equal("Grüße", await InTargetAsync("SELECT Name FROM cases.Utf8;"));
+    }
+
+    [Fact]
+    public async Task A_rowversion_key_keeps_its_value()
+    {
+        var source = await server.ScalarAsync(SqlServer.Cases, "SELECT V FROM cases.VersionKey;");
+
+        Assert.Equal(source, await InTargetAsync("SELECT V FROM cases.VersionKey;"));
+    }
+
+    [Fact]
     public async Task Computed_columns_are_computed_again()
     {
         Assert.Equal(42, await InTargetAsync("SELECT Doubled FROM cases.ComputedIndexed;"));
