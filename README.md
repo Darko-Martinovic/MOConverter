@@ -172,7 +172,7 @@ For example (a few of the test tables, cut to fit):
 
 The memory column is a guide. For each row it counts the table's data, a 24-byte header and an 8-byte pointer per index, and then doubles that for row versions and growth, as Microsoft's sizing advice suggests.
 
-The limits behind these rules were checked on SQL Server 2022 and 2025. The tests ask the server again on every run (`tests/MOConverter.Tests/ServerAgreesTests.cs`):
+The limits behind these rules were checked on SQL Server 2019, 2022 and 2025. The tests ask the server again on every run (`tests/MOConverter.Tests/ServerAgreesTests.cs`):
 - each function the tool accepts or refuses in a check or default;
 - each type it keeps or maps, and each CAST it refuses;
 - the 2500-byte key limit, at its boundary;
@@ -203,7 +203,7 @@ Every rule the assessment applies, worst outcome first. `moconverter rules` prin
 | `unique-filtered-index` | blocked | A unique filtered index: without its filter, rows it allowed could clash. |
 | `foreign-key-boundary` | blocked | A foreign key links the table to one that won't be in the new database: not selected, blocked, or memory-optimized already. |
 | `foreign-key-target` | blocked | A foreign key references a unique key: between memory-optimized tables, it must reference the primary key. |
-| `max-key` | blocked | A primary key column becomes max, as a UTF-8 varchar over 4000 does, and no index can have one in its key. |
+| `max-key` | blocked | A primary key is too wide even for a hash index: a column becomes max, as a UTF-8 varchar over 4000 does, or the key passes 8060 bytes. |
 | `untrusted` | blocked | A foreign key or check made WITH NOCHECK may have rows that break it, and the memory-optimized copy checks every row. |
 | `definition-hidden` | blocked | A definition isn't visible to this login: it needs VIEW DEFINITION. |
 | `type-lossy` | lossy | A column's type is stored as another type, and loses its methods or part of its value. |
@@ -222,7 +222,7 @@ Every rule the assessment applies, worst outcome first. `moconverter rules` prin
 | `sparse` | fixed | SPARSE isn't supported: the column is stored in full. |
 | `utf8-collation` | fixed | char and varchar can't have a UTF-8 collation: they become nchar and nvarchar, with the same collation. |
 | `wide-key` | fixed | A range index's key can't pass 2500 bytes: a primary key becomes a hash index, another index is left out. |
-| `columnstore-limits` | fixed | A clustered columnstore index is left out when a column is max, a column is computed, or a row can pass 8060 bytes. |
+| `columnstore-limits` | fixed | A clustered columnstore index is left out when a column is max, a column is computed, or a row is too long for one. |
 | `computed-index-persisted` | fixed | An index on a computed column needs it PERSISTED. |
 | `clustered-index` | fixed | Memory-optimized tables have no clustered rowstore index: it becomes nonclustered. |
 | `included-columns` | fixed | Every index on a memory-optimized table covers all columns: INCLUDE is dropped. |

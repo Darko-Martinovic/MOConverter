@@ -27,6 +27,8 @@ INSERT cases.Ready (Name, Price) SELECT TOP (1000) CONCAT(N'Item ', ROW_NUMBER()
 
 -- Ready: version 1 dropped this check, because "UpperLimit" contains "upper"
 CREATE TABLE cases.UpperLimit (Id int PRIMARY KEY, UpperLimit int NULL CONSTRAINT CK_UpperLimit CHECK (UpperLimit > 0));
+-- Ready: NOT FOR REPLICATION keeps a check untrusted for good, but no rows are unchecked
+CREATE TABLE cases.ReplicationCheck (Id int PRIMARY KEY, A int NULL CONSTRAINT CK_ReplicationCheck_A CHECK NOT FOR REPLICATION (A > 0));
 
 -- Ready: version 1 kept only 8 indexes, and dropped columnstore
 CREATE TABLE cases.ManyIndexes (
@@ -116,6 +118,7 @@ ALTER TABLE cases.Tracked ENABLE CHANGE_TRACKING;
 CREATE TABLE cases.WideIndex (Id int PRIMARY KEY, Code varchar(3000) NULL, INDEX IX_WideIndex_Code (Code));
 CREATE TABLE cases.WidePrimaryKey (Code varchar(2600) NOT NULL PRIMARY KEY);
 CREATE TABLE cases.TwoVarIndex (Id int PRIMARY KEY, A varchar(1248) NOT NULL, B varchar(1248) NOT NULL, INDEX IX_TwoVarIndex (A, B));
+CREATE TABLE cases.KeyTime (Id int PRIMARY KEY, At time NOT NULL, Code varchar(2490) NOT NULL, INDEX IX_KeyTime (At, Code));
 -- Fixed: char and varchar can't have a UTF-8 collation
 CREATE TABLE cases.Utf8 (Id int PRIMARY KEY, Name varchar(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8 NULL, INDEX IX_Utf8_Name (Name));
 -- Fixed: a clustered columnstore index can't hold nvarchar(max)
@@ -136,6 +139,8 @@ CREATE TABLE cases.ComputedVariant (Id int PRIMARY KEY, Anything AS CONVERT(sql_
 CREATE TABLE cases.GeoProperty (Id int PRIMARY KEY, Place geography NULL, Lat AS Place.Lat);
 -- Blocked: a UTF-8 varchar over 4000 becomes nvarchar(max), which no key can have
 CREATE TABLE cases.Utf8Key (Code varchar(5000) COLLATE Latin1_General_100_CI_AS_SC_UTF8 NOT NULL PRIMARY KEY NONCLUSTERED);
+-- Blocked: a primary key too wide even for a hash index
+CREATE TABLE cases.WideHashKey (A varchar(8000) NOT NULL, B varchar(8000) NOT NULL, CONSTRAINT PK_WideHashKey PRIMARY KEY NONCLUSTERED (A, B));
 -- Blocked: a key to a unique constraint rather than the primary key, and the table it references
 CREATE TABLE cases.UniqueParent (Id int PRIMARY KEY, Code int NOT NULL CONSTRAINT UQ_UniqueParent_Code UNIQUE);
 CREATE TABLE cases.UniqueChild (Id int PRIMARY KEY, Code int NULL CONSTRAINT FK_UniqueChild_Code REFERENCES cases.UniqueParent (Code));
@@ -198,3 +203,5 @@ INSERT cases.CastCheck (Id, Moment) VALUES (1, '2026-10-29T12:00:00+02:00');
 INSERT cases.VersionKey (Name) VALUES (N'x');
 INSERT cases.Brackets ([Id], [[a]]], [[], [[ab]) VALUES (1, 10, 20, 30);
 INSERT cases.TwoVarIndex (Id, A, B) VALUES (1, 'a', 'b');
+INSERT cases.KeyTime (Id, At, Code) VALUES (1, '12:00', 'c');
+INSERT cases.ReplicationCheck (Id, A) VALUES (1, 5);

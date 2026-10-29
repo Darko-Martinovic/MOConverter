@@ -237,7 +237,8 @@ public static class CatalogReader
                CASE WHEN EXISTS (SELECT 1 FROM sys.indexes ri
                                  WHERE ri.object_id = fk.referenced_object_id AND ri.index_id = fk.key_index_id AND ri.is_primary_key = 1)
                     THEN 1 ELSE 0 END,
-               fk.is_not_trusted
+               -- NOT FOR REPLICATION keeps a constraint untrusted for good, rows or not: not a sign of bad rows
+               CAST(CASE WHEN fk.is_not_trusted = 1 AND fk.is_not_for_replication = 0 THEN 1 ELSE 0 END AS bit)
         FROM sys.foreign_keys fk
         JOIN sys.tables t ON t.object_id = fk.parent_object_id AND t.is_ms_shipped = 0;
 
@@ -248,7 +249,8 @@ public static class CatalogReader
         JOIN sys.columns rc ON rc.object_id = fkc.referenced_object_id AND rc.column_id = fkc.referenced_column_id
         ORDER BY fkc.constraint_object_id, fkc.constraint_column_id;
 
-        SELECT cc.parent_object_id, cc.name, cc.definition, cc.is_disabled, cc.is_not_trusted
+        SELECT cc.parent_object_id, cc.name, cc.definition, cc.is_disabled,
+               CAST(CASE WHEN cc.is_not_trusted = 1 AND cc.is_not_for_replication = 0 THEN 1 ELSE 0 END AS bit)
         FROM sys.check_constraints cc
         JOIN sys.tables t ON t.object_id = cc.parent_object_id AND t.is_ms_shipped = 0
         ORDER BY cc.parent_object_id, cc.name;
