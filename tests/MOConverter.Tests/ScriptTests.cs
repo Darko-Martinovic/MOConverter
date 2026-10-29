@@ -52,7 +52,7 @@ public sealed class ScriptTests(SqlServer server)
         "Indexes", "ComputedIndexed", "Sparse", "Partitioned", "Compressed", "Disabled", "LossyTypes", "AliasLossy",
         "Checks", "Defaults", "IdentitySeed", "BigSeed", "Child", "Audited", "Tracked",
         "WideIndex", "WidePrimaryKey", "Utf8", "ColumnstoreLimits", "WideUnique", "ComputedOverLossy", "CastCheck", "VersionKey",
-        "Brackets", "TwoVarIndex", "KeyTime", "ReplicationCheck",
+        "Brackets", "TwoVarIndex", "KeyTime",
     ];
 
     public static TheoryData<string> Convertible => [.. ConvertibleNames];

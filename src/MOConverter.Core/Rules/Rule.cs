@@ -55,7 +55,8 @@ public static class RuleCatalogue
     public static readonly Rule ForeignKeyBoundary = new("foreign-key-boundary", Outcome.Blocked, "A foreign key links the table to one that won't be in the new database: not selected, blocked, or memory-optimized already.");
     public static readonly Rule ForeignKeyTarget = new("foreign-key-target", Outcome.Blocked, "A foreign key references a unique key: between memory-optimized tables, it must reference the primary key.");
     public static readonly Rule MaxKey = new("max-key", Outcome.Blocked, "A primary key is too wide even for a hash index: a column becomes max, as a UTF-8 varchar over 4000 does, or the key passes 8060 bytes.");
-    public static readonly Rule Untrusted = new("untrusted", Outcome.Blocked, "A foreign key or check made WITH NOCHECK may have rows that break it, and the memory-optimized copy checks every row.");
+    public static readonly Rule RowTooLong = new("row-too-long", Outcome.Blocked, "What must stay in a row (fixed-size columns and index keys) passes 8060 bytes.");
+    public static readonly Rule Untrusted = new("untrusted", Outcome.Blocked, "A foreign key or check made WITH NOCHECK or NOT FOR REPLICATION may have rows that break it, and the memory-optimized copy checks every row.");
     public static readonly Rule DefinitionHidden = new("definition-hidden", Outcome.Blocked, "A definition isn't visible to this login: it needs VIEW DEFINITION.");
 
     // Lossy changes

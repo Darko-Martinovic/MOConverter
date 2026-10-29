@@ -27,7 +27,7 @@ INSERT cases.Ready (Name, Price) SELECT TOP (1000) CONCAT(N'Item ', ROW_NUMBER()
 
 -- Ready: version 1 dropped this check, because "UpperLimit" contains "upper"
 CREATE TABLE cases.UpperLimit (Id int PRIMARY KEY, UpperLimit int NULL CONSTRAINT CK_UpperLimit CHECK (UpperLimit > 0));
--- Ready: NOT FOR REPLICATION keeps a check untrusted for good, but no rows are unchecked
+-- Blocked: NOT FOR REPLICATION keeps a check untrusted whatever the rows, and memory-optimized tables refuse it
 CREATE TABLE cases.ReplicationCheck (Id int PRIMARY KEY, A int NULL CONSTRAINT CK_ReplicationCheck_A CHECK NOT FOR REPLICATION (A > 0));
 
 -- Ready: version 1 kept only 8 indexes, and dropped columnstore
@@ -141,6 +141,11 @@ CREATE TABLE cases.GeoProperty (Id int PRIMARY KEY, Place geography NULL, Lat AS
 CREATE TABLE cases.Utf8Key (Code varchar(5000) COLLATE Latin1_General_100_CI_AS_SC_UTF8 NOT NULL PRIMARY KEY NONCLUSTERED);
 -- Blocked: a primary key too wide even for a hash index
 CREATE TABLE cases.WideHashKey (A varchar(8000) NOT NULL, B varchar(8000) NOT NULL, CONSTRAINT PK_WideHashKey PRIMARY KEY NONCLUSTERED (A, B));
+-- Blocked: more must stay in the row than 8060 bytes: four indexed varchar(2490) keys, or a
+-- hash key that fits alone but not with one more fixed column
+CREATE TABLE cases.FourKeys (Id int PRIMARY KEY, A varchar(2490) NOT NULL, B varchar(2490) NOT NULL, C varchar(2490) NOT NULL, D varchar(2490) NOT NULL,
+    INDEX IX_FourKeys_A (A), INDEX IX_FourKeys_B (B), INDEX IX_FourKeys_C (C), INDEX IX_FourKeys_D (D));
+CREATE TABLE cases.HashPlusInt (A varchar(4000) NOT NULL, B varchar(4050) NOT NULL, X int NOT NULL, CONSTRAINT PK_HashPlusInt PRIMARY KEY NONCLUSTERED (A, B));
 -- Blocked: a key to a unique constraint rather than the primary key, and the table it references
 CREATE TABLE cases.UniqueParent (Id int PRIMARY KEY, Code int NOT NULL CONSTRAINT UQ_UniqueParent_Code UNIQUE);
 CREATE TABLE cases.UniqueChild (Id int PRIMARY KEY, Code int NULL CONSTRAINT FK_UniqueChild_Code REFERENCES cases.UniqueParent (Code));

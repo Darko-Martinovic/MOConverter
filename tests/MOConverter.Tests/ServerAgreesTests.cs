@@ -297,6 +297,69 @@ public sealed class ServerAgreesTests(SqlServer server)
         Assert.NotNull(await server.TryAsync(SqlServer.Probe, Table(widest + 64)));
     }
 
+    /// <summary>
+    /// A table's columns besides an int primary key and a filler of bigint columns, whose count is
+    /// found: what must stay in the row against 8060 bytes. "indexed" puts a range index on the
+    /// columns.
+    /// </summary>
+    [Theory]
+    [InlineData(0, "int NOT NULL", false)]
+    [InlineData(100, "varchar(1) NULL", false)]
+    [InlineData(100, "varchar(10) NULL", false)]
+    [InlineData(100, "varchar(24) NULL", false)]
+    [InlineData(100, "varchar(25) NULL", false)]
+    [InlineData(100, "varchar(31) NULL", false)]
+    [InlineData(100, "varchar(4) NULL", false)]
+    [InlineData(100, "varchar(32) NULL", false)]
+    [InlineData(100, "varchar(100) NULL", false)]
+    [InlineData(100, "varchar(32) NOT NULL", false)]
+    [InlineData(100, "nvarchar(12) NULL", false)]
+    [InlineData(100, "nvarchar(16) NULL", false)]
+    [InlineData(10, "varchar(1000) NULL", false)]
+    [InlineData(1, "varchar(7000) NULL", false)]
+    [InlineData(2, "nvarchar(max) NULL", false)]
+    [InlineData(1, "varchar(2490) NOT NULL", true)]
+    [InlineData(3, "varchar(2000) NOT NULL", true)]
+    [InlineData(200, "time(0) NOT NULL", false)]
+    [InlineData(300, "datetime2(0) NULL", false)]
+    public async Task The_server_takes_every_row_the_tool_allows(int count, string type, bool indexed)
+    {
+        var columns = ShapeColumns([.. Enumerable.Repeat(type, count)]);
+        TableInfo Table(int bigints)
+        {
+            var infos = new List<ColumnInfo> { new("id", "int", "int", "sys", false, false, 4, 10, 0, IsNullable: false) };
+            infos.AddRange(columns.Select((c, i) => new ColumnInfo($"c{i}", c.Type, c.Type, "sys", false, false, c.MaxLength, c.Precision, c.Scale, c.Nullable)));
+            infos.AddRange(Enumerable.Range(0, bigints).Select(i => new ColumnInfo($"b{i}", "bigint", "bigint", "sys", false, false, 8, 19, 0, IsNullable: false)));
+            List<IndexInfo> indexes = [new("pk", "NONCLUSTERED", true, true, false, false, null, false, [new IndexColumn("id", false)], [])];
+            if (indexed)
+                indexes.AddRange(columns.Select((_, i) => new IndexInfo($"ix{i}", "NONCLUSTERED", false, false, false, false, null, false, [new IndexColumn($"c{i}", false)], [])));
+            return new TableInfo(new ObjectName("dbo", "t"), 0, 0, infos, indexes, [], []);
+        }
+
+        string Sql(int bigints) =>
+            $"CREATE TABLE dbo.t_{Guid.NewGuid():N} (id int NOT NULL PRIMARY KEY NONCLUSTERED"
+            + string.Concat(columns.Select((c, i) => $", c{i} {c.Sql} {(c.Nullable ? "NULL" : "NOT NULL")}"))
+            + string.Concat(Enumerable.Range(0, bigints).Select(i => $", b{i} bigint NOT NULL"))
+            + (indexed ? string.Concat(columns.Select((_, i) => $", INDEX ix{i} (c{i})")) : "")
+            + ") WITH (MEMORY_OPTIMIZED = ON);";
+
+        var most = Enumerable.Range(0, 1100).Last(b => Limits.InRowBytes(Table(b)) <= Limits.MaxInRowBytes);
+        Assert.Null(await server.TryAsync(SqlServer.Probe, Sql(most)));
+        // 128 bytes more: not much stricter than the server either. Tiny varchar columns are where
+        // it is strictest, a byte or so each, since counting less would risk counting too little
+        Assert.NotNull(await server.TryAsync(SqlServer.Probe, Sql(most + 16)));
+    }
+
+    [Theory]
+    // Four range keys that each fit, but not all in one row; and a key that fits a hash index alone,
+    // but not with one more column
+    [InlineData("a varchar(2490) NOT NULL, b varchar(2490) NOT NULL, c varchar(2490) NOT NULL, d varchar(2490) NOT NULL, PRIMARY KEY NONCLUSTERED (a), INDEX ib (b), INDEX ic (c), INDEX id2 (d)")]
+    [InlineData("a varchar(4000) NOT NULL, b varchar(4050) NOT NULL, x int NOT NULL, PRIMARY KEY NONCLUSTERED HASH (a, b) WITH (BUCKET_COUNT = 64)")]
+    public async Task A_row_too_long_is_refused(string columns)
+    {
+        Assert.NotNull(await server.TryAsync(SqlServer.Probe, $"CREATE TABLE dbo.t_{Guid.NewGuid():N} ({columns}) WITH (MEMORY_OPTIMIZED = ON);"));
+    }
+
     private sealed record ShapeColumn(string Sql, string Type, int MaxLength, int Precision, int Scale, bool Nullable, bool Grows);
 
     /// <summary>Columns from their declarations, with what sys.columns would say of each.</summary>
@@ -307,12 +370,12 @@ public sealed class ServerAgreesTests(SqlServer server)
         var declared = parts[0];
         var open = declared.IndexOf('(');
         var name = open > 0 ? declared[..open] : declared;
-        var arguments = open > 0 ? declared[(open + 1)..^1].Split(',').Select(a => int.Parse(a, System.Globalization.CultureInfo.InvariantCulture)).ToArray() : [];
+        var arguments = open > 0 ? declared[(open + 1)..^1].Split(',').Select(a => a == "max" ? -1 : int.Parse(a, System.Globalization.CultureInfo.InvariantCulture)).ToArray() : [];
         return name switch
         {
             "varchar" or "char" or "binary" or "varbinary" when arguments.Length == 0 => new ShapeColumn(declared, name, 0, 0, 0, nullable, Grows: true),
             "varchar" or "char" or "binary" or "varbinary" => new ShapeColumn(declared, name, arguments[0], 0, 0, nullable, false),
-            "nvarchar" or "nchar" => new ShapeColumn(declared, name, 2 * arguments[0], 0, 0, nullable, false),
+            "nvarchar" or "nchar" => new ShapeColumn(declared, name, arguments[0] < 0 ? -1 : 2 * arguments[0], 0, 0, nullable, false),
             "sysname" => new ShapeColumn(declared, "sysname", 256, 0, 0, nullable, false),
             "decimal" or "numeric" => new ShapeColumn(declared, name, arguments[0] switch { <= 9 => 5, <= 19 => 9, <= 28 => 13, _ => 17 }, arguments[0], arguments.ElementAtOrDefault(1), nullable, false),
             "datetime2" => new ShapeColumn(declared, name, 8, 27, arguments.Length > 0 ? arguments[0] : 7, nullable, false),
