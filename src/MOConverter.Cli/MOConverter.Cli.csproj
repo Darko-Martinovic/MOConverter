@@ -8,7 +8,18 @@
     <ToolCommandName>moconverter</ToolCommandName>
     <PackageId>MOConverter</PackageId>
     <Description>Checks which tables of a SQL Server database can become memory-optimized (In-Memory OLTP), and why not, and converts them into a new database.</Description>
+    <PackageTags>sql-server;in-memory-oltp;memory-optimized;hekaton;dotnet-tool;migration</PackageTags>
+    <PackageProjectUrl>https://github.com/Darko-Martinovic/MOConverter</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>https://github.com/Darko-Martinovic/MOConverter/releases</PackageReleaseNotes>
+    <RepositoryType>git</RepositoryType>
+    <Copyright>Copyright (c) 2018-2026 Darko Martinovic</Copyright>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The package's own README: nuget.org can't follow the repository README's relative links -->
+    <None Include="PackageReadme.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MOConverter.Core\MOConverter.Core.csproj" />

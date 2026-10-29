@@ -1,0 +1,54 @@
+name: release
+
+# Publishes the tool to nuget.org when a GitHub release is published, or by hand for a tag that
+# already has a release. nuget.org trusts this workflow through a Trusted Publishing policy, so
+# no API key is stored: NuGet/login exchanges the workflow's OIDC token for a key valid one hour.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release's tag, for example v2.0.0
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Check the tag matches the version
+        run: |
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props)
+          if [ "v$version" != "$TAG" ]; then
+            echo "The tag $TAG doesn't match the version $version in Directory.Build.props"
+            exit 1
+          fi
+
+      - run: dotnet pack src/MOConverter.Cli -c Release -o artifacts
+
+      - uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to nuget.org
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Attach the package to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" artifacts/*.nupkg --clobber
