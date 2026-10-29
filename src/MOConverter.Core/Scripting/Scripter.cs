@@ -29,6 +29,19 @@ public static class Scripter
 
     public static string Script(DatabaseModel model, IReadOnlyCollection<ObjectName> tables, ScriptOptions options)
     {
+        var (setup, foreignKeys) = Parts(model, tables, options);
+        return foreignKeys.Length == 0 ? setup : $"{setup}{Environment.NewLine}{foreignKeys}";
+    }
+
+    /// <summary>
+    /// The script in two parts: everything up to the empty tables, which ends in the target
+    /// database (it has a USE); and the foreign keys, which convert adds after the data.
+    /// </summary>
+    public static (string Setup, string ForeignKeys) Parts(DatabaseModel model, IReadOnlyCollection<ObjectName> tables, ScriptOptions options) =>
+        (Setup(model, tables, options), ForeignKeys(model, tables));
+
+    private static string Setup(DatabaseModel model, IReadOnlyCollection<ObjectName> tables, ScriptOptions options)
+    {
         var chosen = model.Tables.Where(t => tables.Contains(t.Name)).ToList();
         var target = Quote(options.TargetDatabase);
         var filegroup = options.TargetDatabase + "_mo";
@@ -39,6 +52,7 @@ public static class Scripter
         text.AppendLine("-- The tables are empty: moconverter convert copies the data, which T-SQL can't do across databases");
         text.AppendLine("-- once one side is memory-optimized.");
         text.AppendLine("-- FIXED marks a change that keeps the data and query results; LOSSY one that doesn't.");
+        text.AppendLine("-- Run it with sqlcmd -b -x: -x keeps sqlcmd from reading $( in a name as a variable.");
         text.AppendLine("SET ANSI_NULLS ON;");
         text.AppendLine("SET QUOTED_IDENTIFIER ON;");
         text.AppendLine("GO");
@@ -47,17 +61,23 @@ public static class Scripter
             ? $"    CREATE DATABASE {target} COLLATE {model.Server.DatabaseCollation};"
             : $"    CREATE DATABASE {target};");
         text.AppendLine("GO");
+        text.AppendLine("-- A memory-optimized filegroup refuses AUTO_CLOSE, which Express turns on for new databases");
+        text.AppendLine($"ALTER DATABASE {target} SET AUTO_CLOSE OFF;");
         text.AppendLine($"ALTER DATABASE {target} SET MEMORY_OPTIMIZED_ELEVATE_TO_SNAPSHOT = ON;");
         text.AppendLine("GO");
         text.AppendLine($"USE {target};");
         text.AppendLine("GO");
-        text.AppendLine("-- The filegroup's container goes in the server's default data folder");
-        text.AppendLine("IF NOT EXISTS (SELECT 1 FROM sys.filegroups WHERE type = 'FX')");
-        text.AppendLine("BEGIN");
+        text.AppendLine($"IF NOT EXISTS (SELECT 1 FROM sys.filegroups WHERE type = 'FX')");
         text.AppendLine($"    ALTER DATABASE {target} ADD FILEGROUP {Quote(filegroup)} CONTAINS MEMORY_OPTIMIZED_DATA;");
+        text.AppendLine("GO");
+        text.AppendLine("-- The container goes in the server's default data folder. It is checked apart from the filegroup,");
+        text.AppendLine("-- so a run that stopped between the two adds it.");
+        text.AppendLine("IF NOT EXISTS (SELECT 1 FROM sys.database_files f JOIN sys.filegroups g ON g.data_space_id = f.data_space_id WHERE g.type = 'FX')");
+        text.AppendLine("BEGIN");
+        text.AppendLine($"    DECLARE @filegroup sysname = (SELECT TOP (1) name FROM sys.filegroups WHERE type = 'FX');");
         text.AppendLine($"    DECLARE @container nvarchar(4000) = CAST(SERVERPROPERTY('InstanceDefaultDataPath') AS nvarchar(4000)) + {Literal(filegroup)};");
         text.AppendLine($"    DECLARE @add nvarchar(max) = {Literal($"ALTER DATABASE {target} ADD FILE (NAME = {Literal(filegroup)}, FILENAME = N'")}");
-        text.AppendLine($"        + REPLACE(@container, N'''', N'''''') + {Literal($"') TO FILEGROUP {Quote(filegroup)};")};");
+        text.AppendLine($"        + REPLACE(@container, N'''', N'''''') + N''') TO FILEGROUP ' + QUOTENAME(@filegroup) + N';';");
         text.AppendLine("    EXEC (@add);");
         text.AppendLine("END");
         text.AppendLine("GO");
@@ -70,23 +90,27 @@ public static class Scripter
         foreach (var table in chosen)
         {
             text.AppendLine();
-            Table(text, table, model.ForeignKeys, options);
+            Table(text, table, model.ForeignKeys, options, model.Server.DatabaseCollation);
             text.AppendLine("GO");
         }
 
+        return text.ToString();
+    }
+
+    private static string ForeignKeys(DatabaseModel model, IReadOnlyCollection<ObjectName> tables)
+    {
         var keys = model.ForeignKeys
-            .Where(k => tables.Contains(k.Table) && tables.Contains(k.Referenced))
+            .Where(k => !k.IsDisabled && tables.Contains(k.Table) && tables.Contains(k.Referenced))
             .OrderBy(k => k.Table.ToString(), StringComparer.Ordinal).ThenBy(k => k.Name, StringComparer.Ordinal)
             .ToList();
-        if (keys.Count > 0)
-        {
-            text.AppendLine();
-            text.AppendLine("-- Foreign keys, once every table exists");
-            foreach (var key in keys)
-                ForeignKey(text, key);
-            text.AppendLine("GO");
-        }
+        if (keys.Count == 0)
+            return "";
 
+        var text = new StringBuilder();
+        text.AppendLine("-- Foreign keys, once every table exists");
+        foreach (var key in keys)
+            ForeignKey(text, key);
+        text.AppendLine("GO");
         return text.ToString();
     }
 
@@ -100,25 +124,34 @@ public static class Scripter
         return (int)Math.Min(MaximumBuckets, (long)System.Numerics.BitOperations.RoundUpToPowerOf2((ulong)wanted));
     }
 
-    private static void Table(StringBuilder text, TableInfo table, IReadOnlyList<ForeignKeyInfo> foreignKeys, ScriptOptions options)
+    private static void Table(StringBuilder text, TableInfo table, IReadOnlyList<ForeignKeyInfo> foreignKeys, ScriptOptions options, string databaseCollation)
     {
         var header = new List<string>();
         var items = new List<(List<string> Notes, string Definition)>();
 
+        var schemaOnly = options.SchemaOnly.Contains(table.Name);
+        var primaryKey = table.Indexes.Single(i => i.IsPrimaryKey);
         var indexedColumns = table.Indexes.Where(i => !i.IsDisabled).SelectMany(i => i.Keys).Select(k => k.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var column in table.Columns)
-            items.Add(Column(column, indexedColumns.Contains(column.Name)));
+        {
+            items.Add(Column(table, column, indexedColumns.Contains(column.Name),
+                primaryKey.Keys.Any(k => k.Name == column.Name), databaseCollation));
+        }
 
-        var primaryKey = table.Indexes.Single(i => i.IsPrimaryKey);
+        var keyBytes = Limits.KeyBytes(table, primaryKey);
         var hash = options.HashPrimaryKeys.Contains(table.Name)
-            || string.Equals(table.PrimaryKeyHint, "HASH", StringComparison.OrdinalIgnoreCase);
+            || string.Equals(table.PrimaryKeyHint, "HASH", StringComparison.OrdinalIgnoreCase)
+            || keyBytes > Limits.MaxKeyBytes;
+        var keyNotes = new List<string>();
+        if (keyBytes > Limits.MaxKeyBytes && !options.HashPrimaryKeys.Contains(table.Name))
+            keyNotes.Add($"FIXED: the key takes {Bytes(keyBytes)}, more than a range index's {Limits.MaxKeyBytes}, so it is a hash index");
         var keyColumns = string.Join(", ", primaryKey.Keys.Select(k => hash ? Quote(k.Name) : Key(k)));
-        items.Add(([], hash
+        items.Add((keyNotes, hash
             ? $"CONSTRAINT {Quote(primaryKey.Name)} PRIMARY KEY NONCLUSTERED HASH ({keyColumns}) WITH (BUCKET_COUNT = {BucketCount(table.Rows)})"
             : $"CONSTRAINT {Quote(primaryKey.Name)} PRIMARY KEY NONCLUSTERED ({keyColumns})"));
 
         foreach (var index in table.Indexes.Where(i => !i.IsPrimaryKey))
-            Index(index, header, items);
+            Index(table, index, schemaOnly, header, items);
 
         foreach (var check in table.Checks)
         {
@@ -151,7 +184,7 @@ public static class Scripter
         foreach (var key in foreignKeys.Where(k => k.Table == table.Name && k.IsDisabled))
             header.Add($"FIXED: foreign key {Quote(key.Name)} is disabled, and isn't carried over");
 
-        var durability = options.SchemaOnly.Contains(table.Name) ? "SCHEMA_ONLY" : "SCHEMA_AND_DATA";
+        var durability = schemaOnly ? "SCHEMA_ONLY" : "SCHEMA_AND_DATA";
         var rows = table.Rows.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
         text.AppendLine($"-- {table.Name}: {rows} rows{(durability == "SCHEMA_ONLY" ? ", SCHEMA_ONLY: its rows don't survive a restart" : "")}");
         foreach (var note in header)
@@ -169,7 +202,7 @@ public static class Scripter
         text.AppendLine($"WITH (MEMORY_OPTIMIZED = ON, DURABILITY = {durability});");
     }
 
-    private static (List<string> Notes, string Definition) Column(ColumnInfo column, bool isIndexed)
+    private static (List<string> Notes, string Definition) Column(TableInfo table, ColumnInfo column, bool isIndexed, bool inPrimaryKey, string databaseCollation)
     {
         var name = Quote(column.Name);
         var notes = new List<string>();
@@ -179,6 +212,9 @@ public static class Scripter
             var persisted = column.IsPersisted || isIndexed;
             if (persisted && !column.IsPersisted)
                 notes.Add($"FIXED: {name} is indexed, so it becomes PERSISTED");
+            var changed = TableRules.LossyColumnsIn(table, column.ComputedDefinition!);
+            if (changed.Count > 0)
+                notes.Add($"LOSSY: it uses {string.Join(", ", changed)}, whose type changes, so its values can change");
             return (notes, $"{name} AS {column.ComputedDefinition}{(persisted ? " PERSISTED" : "")}");
         }
 
@@ -192,9 +228,12 @@ public static class Scripter
         if (column.IsSparse)
             notes.Add("FIXED: no longer SPARSE");
 
+        // xml, json and vector have no collation: as text they take the source database's, even
+        // in a target database that exists with another
+        var collation = column.Collation ?? (databaseCollation.Length > 0 ? databaseCollation : null);
         var definition = new StringBuilder($"{name} {mapping.Target}");
-        if (column.Collation is not null && IsText(mapping.Target))
-            definition.Append($" COLLATE {column.Collation}");
+        if (collation is not null && IsText(mapping.Target))
+            definition.Append($" COLLATE {collation}");
 
         if (column.IsIdentity)
         {
@@ -203,8 +242,9 @@ public static class Scripter
             definition.Append(" IDENTITY(1, 1)");
         }
 
-        // A rowversion was filled in by SQL Server; as binary(8), nothing fills it in
-        var nullable = column.IsNullable || column.Type == "timestamp";
+        // A rowversion was filled in by SQL Server; as binary(8), nothing fills it in, unless it is
+        // part of the primary key, which can't be NULL
+        var nullable = column.IsNullable || (column.Type == "timestamp" && !inPrimaryKey);
         definition.Append(nullable ? " NULL" : " NOT NULL");
 
         if (column.DefaultDefinition is not null)
@@ -219,7 +259,7 @@ public static class Scripter
         return (notes, definition.ToString());
     }
 
-    private static void Index(IndexInfo index, List<string> header, List<(List<string> Notes, string Definition)> items)
+    private static void Index(TableInfo table, IndexInfo index, bool schemaOnly, List<string> header, List<(List<string> Notes, string Definition)> items)
     {
         var name = Quote(index.Name);
         if (index.IsDisabled)
@@ -237,8 +277,20 @@ public static class Scripter
                 header.Add($"FIXED: nonclustered columnstore index {name} is left out: a memory-optimized table can have a clustered one");
                 return;
             case "CLUSTERED COLUMNSTORE":
-                items.Add(([], $"INDEX {name} CLUSTERED COLUMNSTORE"));
+                if ((schemaOnly ? "the table is SCHEMA_ONLY, which a columnstore index can't be" : Limits.ColumnstoreProblem(table)) is { } problem)
+                    header.Add($"FIXED: clustered columnstore index {name} is left out: {problem}");
+                else
+                    items.Add(([], $"INDEX {name} CLUSTERED COLUMNSTORE"));
                 return;
+        }
+
+        var keyBytes = Limits.KeyBytes(table, index);
+        if (keyBytes > Limits.MaxKeyBytes)
+        {
+            header.Add(index.IsUnique
+                ? $"LOSSY: unique index {name}'s key takes {Bytes(keyBytes)}, more than a range index's {Limits.MaxKeyBytes}: it is left out, and its uniqueness isn't enforced"
+                : $"FIXED: index {name}'s key takes {Bytes(keyBytes)}, more than a range index's {Limits.MaxKeyBytes}: it is left out");
+            return;
         }
 
         var notes = new List<string>();
@@ -260,9 +312,6 @@ public static class Scripter
 
     private static void ForeignKey(StringBuilder text, ForeignKeyInfo key)
     {
-        if (key.IsDisabled)
-            return;
-
         var actions = new[] { ("ON DELETE", key.DeleteAction), ("ON UPDATE", key.UpdateAction) }
             .Where(a => a.Item2 != "NO_ACTION")
             .Select(a => $"{a.Item1} {a.Item2.Replace('_', ' ')}")
@@ -273,6 +322,8 @@ public static class Scripter
         text.AppendLine($"ALTER TABLE {key.Table} ADD CONSTRAINT {Quote(key.Name)} FOREIGN KEY ({string.Join(", ", key.Columns.Select(c => Quote(c.Column)))})");
         text.AppendLine($"    REFERENCES {key.Referenced} ({string.Join(", ", key.Columns.Select(c => Quote(c.Referenced)))});");
     }
+
+    private static string Bytes(int bytes) => bytes == int.MaxValue ? "a max column" : $"{bytes} bytes";
 
     private static string Key(IndexColumn column) => column.IsDescending ? $"{Quote(column.Name)} DESC" : Quote(column.Name);
 

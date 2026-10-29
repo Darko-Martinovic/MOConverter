@@ -26,6 +26,14 @@ public sealed class AssessTests(SqlServer server)
     [InlineData("Partitioned", Outcome.Fixed, "partitioned")]
     [InlineData("Compressed", Outcome.Fixed, "compression")]
     [InlineData("Disabled", Outcome.Fixed, "disabled", "disabled")]
+    [InlineData("WideIndex", Outcome.Fixed, "wide-key")]
+    [InlineData("WidePrimaryKey", Outcome.Fixed, "wide-key")]
+    [InlineData("Utf8", Outcome.Fixed, "utf8-collation")]
+    [InlineData("ColumnstoreLimits", Outcome.Fixed, "columnstore-limits")]
+    [InlineData("WideUnique", Outcome.Lossy, "wide-unique-key")]
+    [InlineData("ComputedOverLossy", Outcome.Lossy, "type-lossy", "computed-over-lossy")]
+    [InlineData("CastCheck", Outcome.Lossy, "type-lossy", "check-unsupported")]
+    [InlineData("VersionKey", Outcome.Lossy, "type-lossy")]
     [InlineData("LossyTypes", Outcome.Lossy, "type-lossy", "type-lossy", "type-lossy", "type-lossy", "type-lossy", "type-lossy")]
     [InlineData("AliasLossy", Outcome.Lossy, "type-lossy")]
     [InlineData("Checks", Outcome.Lossy, "check-unsupported", "check-unsupported")]
@@ -162,7 +170,7 @@ public sealed class AssessTests(SqlServer server)
     {
         var ready = Table(await AssessAsync(), "Ready");
 
-        Assert.Equal(1000, ready.Rows);
+        Assert.Equal(1001, ready.Rows);
         Assert.InRange(ready.EstimatedBytes, 100_000, 10_000_000);
     }
 

@@ -54,6 +54,44 @@ public sealed class ScripterTests
     }
 
     [Fact]
+    public void Auto_close_is_turned_off_before_the_filegroup_is_added()
+    {
+        var script = Script(Table());
+
+        Assert.True(script.IndexOf("SET AUTO_CLOSE OFF", StringComparison.Ordinal) < script.IndexOf("ADD FILEGROUP", StringComparison.Ordinal));
+        Assert.Contains("IF NOT EXISTS (SELECT 1 FROM sys.database_files f JOIN sys.filegroups g", script);
+    }
+
+    [Fact]
+    public void A_primary_key_too_wide_for_a_range_index_is_a_hash_index()
+    {
+        var table = Table(columns: [new ColumnInfo("Id", "varchar", "varchar", "sys", false, false, 3000, 0, 0, IsNullable: false)]);
+
+        var script = Script(table).ReplaceLineEndings();
+
+        Assert.Contains("""
+                -- FIXED: the key takes 3004 bytes, more than a range index's 2500, so it is a hash index
+                CONSTRAINT [PK_Orders] PRIMARY KEY NONCLUSTERED HASH ([Id]) WITH (BUCKET_COUNT = 64)
+            """.ReplaceLineEndings(), script);
+    }
+
+    [Fact]
+    public void A_schema_only_table_loses_its_columnstore_index()
+    {
+        var table = Table(indexes:
+        [
+            new IndexInfo("PK_Orders", "NONCLUSTERED", true, true, false, false, null, false, [new IndexColumn("Id", false)], []),
+            new IndexInfo("CCI", "CLUSTERED COLUMNSTORE", false, false, false, false, null, false, [], []),
+        ]);
+
+        var script = Scripter.Script(new DatabaseModel(Server, [table], []), [table.Name],
+            new ScriptOptions("Sales_InMem", new HashSet<ObjectName>(), new HashSet<ObjectName> { table.Name }));
+
+        Assert.Contains("-- FIXED: clustered columnstore index [CCI] is left out: the table is SCHEMA_ONLY", script);
+        Assert.DoesNotContain("INDEX [CCI] CLUSTERED COLUMNSTORE", script);
+    }
+
+    [Fact]
     public void Names_are_quoted()
     {
         var script = Script(Table());

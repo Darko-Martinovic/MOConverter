@@ -108,6 +108,23 @@ GO
 CREATE TABLE cases.Tracked (Id int PRIMARY KEY);
 ALTER TABLE cases.Tracked ENABLE CHANGE_TRACKING;
 
+-- Size and collation limits a disk table doesn't have. SQL Server warns about the wide keys
+-- here, and creates them.
+-- Fixed: a range index's key can't pass 2500 bytes
+CREATE TABLE cases.WideIndex (Id int PRIMARY KEY, Code varchar(3000) NULL, INDEX IX_WideIndex_Code (Code));
+CREATE TABLE cases.WidePrimaryKey (Code varchar(2600) NOT NULL PRIMARY KEY);
+-- Fixed: char and varchar can't have a UTF-8 collation
+CREATE TABLE cases.Utf8 (Id int PRIMARY KEY, Name varchar(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8 NULL, INDEX IX_Utf8_Name (Name));
+-- Fixed: a clustered columnstore index can't hold nvarchar(max)
+CREATE TABLE cases.ColumnstoreLimits (Id int NOT NULL PRIMARY KEY NONCLUSTERED, Notes nvarchar(max) NULL, INDEX CCI_ColumnstoreLimits CLUSTERED COLUMNSTORE);
+-- Lossy: a unique key too wide to keep
+CREATE TABLE cases.WideUnique (Id int PRIMARY KEY, Note varchar(2600) NULL CONSTRAINT UQ_WideUnique_Note UNIQUE);
+-- Lossy: a computed column over a column whose type changes, a check that casts to a refused
+-- type, and a rowversion primary key
+CREATE TABLE cases.ComputedOverLossy (Id int PRIMARY KEY, Moment datetimeoffset(3) NULL, Local AS CAST(Moment AS datetime2(3)));
+CREATE TABLE cases.CastCheck (Id int PRIMARY KEY, Moment datetimeoffset(3) NULL CONSTRAINT CK_CastCheck CHECK (Moment > CAST('2000-01-01T00:00:00+00:00' AS datetimeoffset(3))));
+CREATE TABLE cases.VersionKey (V rowversion NOT NULL CONSTRAINT PK_VersionKey PRIMARY KEY, Name nvarchar(10) NULL);
+
 -- Blocked
 CREATE TABLE cases.NoPrimaryKey (Id int NOT NULL, Name nvarchar(10) NULL);
 CREATE TABLE cases.Variant (Id int PRIMARY KEY, Value sql_variant NULL);
@@ -132,3 +149,37 @@ CREATE TABLE cases.Temporal (
 CREATE TABLE cases.Linked (Id int PRIMARY KEY, VariantId int NULL CONSTRAINT FK_Linked_Variant REFERENCES cases.Variant (Id));
 -- Blocked in turn: linked to Linked
 CREATE TABLE cases.LinkedToLinked (Id int PRIMARY KEY, LinkedId int NULL CONSTRAINT FK_LinkedToLinked_Linked REFERENCES cases.Linked (Id));
+
+-- Rows for convert to copy, with the values its mappings must keep
+INSERT cases.Ready (Name, Owner) VALUES (N'No owner', NULL);
+INSERT cases.UpperLimit (Id, UpperLimit) VALUES (1, 10);
+INSERT cases.ManyIndexes (Id, A, I) VALUES (1, 1, 9);
+INSERT cases.Columnstore (Id, A) VALUES (1, 1), (2, 2);
+INSERT cases.[Order Details] ([Order Id], [Select], [Unit]]Price]) VALUES (1, 2, 3.50);
+INSERT cases.Parent (Id) VALUES (1), (2);
+INSERT cases.Child (Id, ParentId) VALUES (10, 1), (11, NULL);
+INSERT cases.AliasTypes (Id, Name, Stamp) VALUES (3000000000, 'abc', '2026-10-29T12:34:56.789');
+INSERT cases.OldLobTypes (Id, Notes, Wide, Picture) VALUES (1, 'old text', N'old ntext', 0x0102);
+INSERT cases.Indexes (Id, A, B, C) VALUES (1, 1, 1, 1), (2, NULL, 2, NULL);
+INSERT cases.ComputedIndexed (Id, Price) VALUES (1, 21);
+INSERT cases.Sparse (Id, Rare) VALUES (1, NULL), (2, 5);
+INSERT cases.Partitioned (Id) VALUES (1), (200);
+INSERT cases.Compressed (Id, Name) VALUES (1, N'x');
+INSERT cases.LossyTypes (Id, Doc, Place, Shape, Node, Moment) VALUES (
+    1, '<a b="1"/>', geography::Point(44.8, 20.46, 4326), geometry::STGeomFromText('LINESTRING (0 0, 1 1)', 0),
+    hierarchyid::Parse('/1/2/'), '2026-10-29T12:00:00+02:00');
+INSERT cases.AliasLossy (Id, Moment) VALUES (1, '2026-10-29T12:00:00-05:00');
+INSERT cases.Checks (Id, Code, Name) VALUES (1, 'Abc', 'ABC');
+INSERT cases.Defaults (Id, Num, Host) VALUES (1, NULL, NULL);
+INSERT cases.IdentitySeed (Name) VALUES (N'a'), (N'b');
+INSERT cases.BigSeed DEFAULT VALUES;
+INSERT cases.Audited (Id, Name) VALUES (1, N'x');
+INSERT cases.Tracked (Id) VALUES (1);
+INSERT cases.WideIndex (Id, Code) VALUES (1, 'code');
+INSERT cases.WidePrimaryKey (Code) VALUES ('abc');
+INSERT cases.Utf8 (Id, Name) VALUES (1, N'Grüße');
+INSERT cases.ColumnstoreLimits (Id, Notes) VALUES (1, N'notes');
+INSERT cases.WideUnique (Id, Note) VALUES (1, 'n');
+INSERT cases.ComputedOverLossy (Id, Moment) VALUES (1, '2026-10-29T12:00:00+02:00');
+INSERT cases.CastCheck (Id, Moment) VALUES (1, '2026-10-29T12:00:00+02:00');
+INSERT cases.VersionKey (Name) VALUES (N'x');

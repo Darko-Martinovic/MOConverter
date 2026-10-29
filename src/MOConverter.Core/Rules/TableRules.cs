@@ -66,11 +66,23 @@ public static class TableRules
             var result = TypeMap.Map(column);
             var unsupported = Expressions.UnsupportedInValue(column.ComputedDefinition);
             if (unsupported.Count > 0)
+            {
                 yield return new(RuleCatalogue.ComputedUnsupported, $"{name} AS {column.ComputedDefinition} uses {Expressions.Describe(unsupported)}");
-            else if (result.Rule is not null)
+                yield break;
+            }
+
+            if (result.Rule is not null)
+            {
                 yield return new(RuleCatalogue.ComputedUnsupported, $"{name} AS {column.ComputedDefinition} gives {result.Source}, which memory-optimized tables don't accept as it is");
-            else if (!column.IsPersisted && table.Indexes.Any(i => i.Keys.Any(k => k.Name == column.Name)))
+                yield break;
+            }
+
+            if (!column.IsPersisted && table.Indexes.Any(i => i.Keys.Any(k => k.Name == column.Name)))
                 yield return new(RuleCatalogue.ComputedIndexPersisted, $"{name} is indexed, so it becomes PERSISTED");
+
+            var changed = LossyColumnsIn(table, column.ComputedDefinition);
+            if (changed.Count > 0)
+                yield return new(RuleCatalogue.ComputedOverLossy, $"{name} AS {column.ComputedDefinition} uses {string.Join(", ", changed)}, whose type changes, so its values can change");
             yield break;
         }
 
@@ -124,9 +136,30 @@ public static class TableRules
                 case "NONCLUSTERED COLUMNSTORE":
                     yield return new(RuleCatalogue.NonclusteredColumnstore, $"nonclustered columnstore index {name} is left out");
                     continue;
+                case "CLUSTERED COLUMNSTORE":
+                    if (Limits.ColumnstoreProblem(table) is { } problem)
+                        yield return new(RuleCatalogue.ColumnstoreLimits, $"clustered columnstore index {name} is left out: {problem}");
+                    continue;
                 case "CLUSTERED" when !index.IsPrimaryKey:
                     yield return new(RuleCatalogue.ClusteredIndex, $"clustered index {name} becomes nonclustered");
                     break;
+            }
+
+            var key = Limits.KeyBytes(table, index);
+            if (key > Limits.MaxKeyBytes)
+            {
+                var wide = $"{(index.IsPrimaryKey ? "primary key" : "index")} {name}'s key takes {(key == int.MaxValue ? "a max column" : $"{key} bytes")}, more than a range index's {Limits.MaxKeyBytes}";
+                if (index.IsPrimaryKey)
+                {
+                    yield return new(RuleCatalogue.WideKey, $"{wide}: it becomes a hash index");
+                }
+                else
+                {
+                    yield return index.IsUnique
+                        ? new(RuleCatalogue.WideUniqueKey, $"{wide}: it is left out, and its uniqueness isn't enforced")
+                        : new(RuleCatalogue.WideKey, $"{wide}: it is left out");
+                    continue;
+                }
             }
 
             if (index.HasFilter && index.Filter is null)
@@ -140,6 +173,15 @@ public static class TableRules
                 yield return new(RuleCatalogue.IncludedColumns, $"index {name} drops INCLUDE ({string.Join(", ", index.Included.Select(ObjectName.Quote))})");
         }
     }
+
+    /// <summary>The columns an expression reads whose conversion is lossy, quoted.</summary>
+    public static IReadOnlyList<string> LossyColumnsIn(TableInfo table, string definition) =>
+        Expressions.ColumnsIn(definition)
+            .Select(n => table.Columns.FirstOrDefault(c => c.Name == n))
+            .Where(c => c is { IsComputed: false } && TypeMap.Map(c).Outcome == Outcome.Lossy)
+            .Select(c => ObjectName.Quote(c!.Name))
+            .Order(StringComparer.Ordinal)
+            .ToList();
 
     private static IEnumerable<Finding> Check(CheckInfo check)
     {

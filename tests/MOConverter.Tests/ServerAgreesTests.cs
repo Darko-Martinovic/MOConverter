@@ -1,3 +1,4 @@
+using MOConverter.Catalog;
 using MOConverter.Rules;
 
 namespace MOConverter.Tests;
@@ -177,6 +178,77 @@ public sealed class ServerAgreesTests(SqlServer server)
         Refused(await TryAsync($"p int NULL DEFAULT 1 REFERENCES {parent} (id) {action}"));
         Assert.Null(await TryAsync($"p int NULL REFERENCES {parent} (id)"));
     }
+
+    [Theory]
+    [InlineData("CHECK ({0})", "CAST(i AS xml) IS NOT NULL", "CAST to xml")]
+    [InlineData("CHECK ({0})", "d > CAST('2000-01-01' AS datetimeoffset)", "CAST to datetimeoffset")]
+    [InlineData("z int NULL DEFAULT {0}", "CONVERT(int, CONVERT(sql_variant, 1))", "CONVERT to sql_variant")]
+    public async Task A_cast_to_a_refused_type_is_refused(string shape, string expression, string found)
+    {
+        Refused(await TryAsync($"{Columns}, {string.Format(shape, expression)}"));
+
+        var unsupported = shape.Contains("CHECK") ? Expressions.UnsupportedInCondition(expression) : Expressions.UnsupportedInValue(expression);
+        Assert.Equal([found], unsupported);
+    }
+
+    [Theory]
+    // The key size SQL Server counts: the columns, 4 bytes, and 2 per nullable column
+    [InlineData("a varchar({0}) NULL, INDEX ix (a)", 2494)]
+    [InlineData("a varchar({0}) NOT NULL, INDEX ix (a)", 2496)]
+    [InlineData("a varchar({0}) NULL, b int NULL, INDEX ix (a, b)", 2488)]
+    [InlineData("a binary({0}) NULL, INDEX ix (a)", 2494)]
+    public async Task A_range_key_fits_up_to_2500_bytes_as_counted(string shape, int widest)
+    {
+        Refused(await TryAsync(string.Format(shape, widest + 1)));
+        Assert.Null(await TryAsync(string.Format(shape, widest)));
+
+        var columns = shape.StartsWith("a binary", StringComparison.Ordinal)
+            ? new List<ColumnInfo> { Column("a", "binary", widest, nullable: true) }
+            : [Column("a", "varchar", widest, nullable: !shape.Contains("NOT NULL")), Column("b", "int", 4, nullable: true)];
+        var index = new IndexInfo("ix", "NONCLUSTERED", false, false, false, false, null, false,
+            shape.Contains("(a, b)") ? [new IndexColumn("a", false), new IndexColumn("b", false)] : [new IndexColumn("a", false)], []);
+        var table = new TableInfo(new ObjectName("dbo", "t"), 0, 0, columns, [index], [], []);
+        Assert.Equal(Limits.MaxKeyBytes, Limits.KeyBytes(table, index));
+    }
+
+    [Fact]
+    public async Task A_hash_primary_key_can_be_wider()
+    {
+        Assert.Null(await server.TryAsync(SqlServer.Probe,
+            $"CREATE TABLE dbo.t_{Guid.NewGuid():N} (id varchar(8000) NOT NULL PRIMARY KEY NONCLUSTERED HASH WITH (BUCKET_COUNT = 64)) WITH (MEMORY_OPTIMIZED = ON);"));
+    }
+
+    [Fact]
+    public async Task Utf8_is_refused_for_varchar_and_accepted_for_nvarchar()
+    {
+        Refused(await TryAsync("a varchar(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8 NULL"));
+        Assert.Null(await TryAsync("a nvarchar(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8 NULL, INDEX ix (a)"));
+    }
+
+    [Theory]
+    [InlineData("a nvarchar(max) NULL, INDEX cci CLUSTERED COLUMNSTORE", "SCHEMA_AND_DATA")]
+    [InlineData("a int NULL, b AS a * 2, INDEX cci CLUSTERED COLUMNSTORE", "SCHEMA_AND_DATA")]
+    [InlineData("a varchar(8000) NULL, b varchar(8000) NULL, INDEX cci CLUSTERED COLUMNSTORE", "SCHEMA_AND_DATA")]
+    [InlineData("a int NULL, INDEX cci CLUSTERED COLUMNSTORE", "SCHEMA_ONLY")]
+    public async Task A_columnstore_index_has_limits(string columns, string durability)
+    {
+        var error = await server.TryAsync(SqlServer.Probe,
+            $"CREATE TABLE dbo.t_{Guid.NewGuid():N} (id int NOT NULL PRIMARY KEY NONCLUSTERED, {columns}) WITH (MEMORY_OPTIMIZED = ON, DURABILITY = {durability});");
+
+        Assert.NotNull(error);
+    }
+
+    [Fact]
+    public async Task A_durable_table_cant_reference_a_schema_only_one()
+    {
+        var parent = $"dbo.parent_{Guid.NewGuid():N}";
+        await server.ExecuteAsync(SqlServer.Probe, $"CREATE TABLE {parent} (id int NOT NULL PRIMARY KEY NONCLUSTERED) WITH (MEMORY_OPTIMIZED = ON, DURABILITY = SCHEMA_ONLY);");
+
+        Refused(await TryAsync($"p int NULL REFERENCES {parent} (id)"));
+    }
+
+    private static ColumnInfo Column(string name, string type, int length, bool nullable) =>
+        new(name, type, type, "sys", false, false, length, 0, 0, nullable);
 
     [Fact]
     public async Task A_foreign_key_to_a_unique_key_is_refused()

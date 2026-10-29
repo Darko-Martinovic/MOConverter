@@ -95,16 +95,16 @@ public static class Assessor
     }
 
     /// <summary>
-    /// A foreign key can't link a memory-optimized table to a disk-based one. A table that
-    /// is linked to one that isn't selected, or that is blocked, is blocked too; and so on,
-    /// until no more change.
+    /// A foreign key can't link a memory-optimized table to a disk-based one, nor reach into
+    /// another database. A table linked to one that isn't selected, that is blocked, or that is
+    /// memory-optimized already (and so isn't copied into the new database) is blocked too;
+    /// and so on, until no more change.
     /// </summary>
     private static void BlockAcrossBoundary(DatabaseModel model, Dictionary<ObjectName, List<Finding>> findings)
     {
         var memoryOptimized = model.Tables.Where(t => t.IsMemoryOptimized).Select(t => t.Name).ToHashSet();
         bool Converts(ObjectName name) =>
-            memoryOptimized.Contains(name)
-            || (findings.TryGetValue(name, out var list) && list.All(f => f.Outcome != Outcome.Blocked));
+            findings.TryGetValue(name, out var list) && list.All(f => f.Outcome != Outcome.Blocked);
 
         var keys = model.ForeignKeys.Where(k => !k.IsDisabled && k.Table != k.Referenced).ToList();
         bool changed;
@@ -118,7 +118,9 @@ public static class Assessor
                     if (!findings.TryGetValue(side, out var list) || !Converts(side) || Converts(other))
                         continue;
 
-                    var why = findings.ContainsKey(other) ? "which can't be converted" : "which isn't selected";
+                    var why = memoryOptimized.Contains(other) ? "which is memory-optimized already, and isn't copied into the new database"
+                        : findings.ContainsKey(other) ? "which can't be converted"
+                        : "which isn't selected";
                     list.Add(new Finding(RuleCatalogue.ForeignKeyBoundary,
                         $"foreign key {ObjectName.Quote(key.Name)} links it to {other}, {why}"));
                     changed = true;
