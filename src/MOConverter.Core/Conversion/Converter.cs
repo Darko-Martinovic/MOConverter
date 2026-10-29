@@ -99,8 +99,11 @@ public static partial class Converter
                 BulkCopyTimeout = 0,
                 EnableStreaming = true,
             };
-            foreach (var column in Copied(table))
-                bulk.ColumnMappings.Add(column.Name, column.Name);
+            // By position: SqlBulkCopy takes a name that starts with [ for a quoted one. The new
+            // table has the source's columns in the source's order, computed ones included.
+            var copied = Copied(table).ToList();
+            for (var i = 0; i < copied.Count; i++)
+                bulk.ColumnMappings.Add(i, table.Columns.ToList().IndexOf(copied[i]));
             await bulk.WriteToServerAsync(reader, cancellationToken);
         }
 
@@ -138,7 +141,7 @@ public static partial class Converter
         {
             return await work();
         }
-        catch (Exception e) when (e is SqlException or InvalidOperationException)
+        catch (Exception e) when (e is not OperationCanceledException and not ConversionException)
         {
             throw new ConversionException(step, e);
         }

@@ -191,24 +191,115 @@ public sealed class ServerAgreesTests(SqlServer server)
         Assert.Equal([found], unsupported);
     }
 
-    [Theory]
-    // The key size SQL Server counts: the columns, 4 bytes, and 2 per nullable column
-    [InlineData("a varchar({0}) NULL, INDEX ix (a)", 2494)]
-    [InlineData("a varchar({0}) NOT NULL, INDEX ix (a)", 2496)]
-    [InlineData("a varchar({0}) NULL, b int NULL, INDEX ix (a, b)", 2488)]
-    [InlineData("a binary({0}) NULL, INDEX ix (a)", 2494)]
-    public async Task A_range_key_fits_up_to_2500_bytes_as_counted(string shape, int widest)
-    {
-        Refused(await TryAsync(string.Format(shape, widest + 1)));
-        Assert.Null(await TryAsync(string.Format(shape, widest)));
+    /// <summary>
+    /// Index keys of other columns, then a last column whose width is found: "varchar NULL",
+    /// "int NOT NULL" and so on.
+    /// </summary>
+    public static TheoryData<string> KeyShapes =>
+    [
+        "varchar NOT NULL",
+        "varchar NULL",
+        "char NOT NULL",
+        "binary NULL",
+        "int NOT NULL; varchar NOT NULL",
+        "int NULL; varchar NOT NULL",
+        "varchar(100) NOT NULL; varchar NOT NULL",
+        "varchar(100) NULL; varchar NULL",
+        "varchar(1200) NOT NULL; varchar NOT NULL",
+        "char(100) NOT NULL; char NOT NULL",
+        "varchar(100) NOT NULL; varchar(100) NOT NULL; varchar NOT NULL",
+        "binary(8) NOT NULL; varchar NOT NULL",
+        "nvarchar(50) NOT NULL; varchar NOT NULL",
+        "bigint NOT NULL; varchar NOT NULL",
+        "bigint NULL; varchar NOT NULL",
+        "bigint NOT NULL; bigint NOT NULL; varchar NOT NULL",
+        "datetime2 NOT NULL; varbinary NOT NULL",
+        "decimal NOT NULL; varchar NOT NULL",
+        "uniqueidentifier NOT NULL; varchar NOT NULL",
+        "tinyint NOT NULL; tinyint NOT NULL; tinyint NOT NULL; varchar NOT NULL",
+        "bit NOT NULL; varchar NOT NULL",
+        "int NULL; int NULL; int NULL; int NULL; int NULL; int NULL; int NULL; int NULL; int NULL; varchar NOT NULL",
+    ];
 
-        var columns = shape.StartsWith("a binary", StringComparison.Ordinal)
-            ? new List<ColumnInfo> { Column("a", "binary", widest, nullable: true) }
-            : [Column("a", "varchar", widest, nullable: !shape.Contains("NOT NULL")), Column("b", "int", 4, nullable: true)];
-        var index = new IndexInfo("ix", "NONCLUSTERED", false, false, false, false, null, false,
-            shape.Contains("(a, b)") ? [new IndexColumn("a", false), new IndexColumn("b", false)] : [new IndexColumn("a", false)], []);
-        var table = new TableInfo(new ObjectName("dbo", "t"), 0, 0, columns, [index], [], []);
-        Assert.Equal(Limits.MaxKeyBytes, Limits.KeyBytes(table, index));
+    [Theory]
+    [MemberData(nameof(KeyShapes))]
+    public async Task The_key_size_never_counts_less_than_the_server_and_at_most_4_bytes_more(string shape)
+    {
+        var specs = shape.Split("; ");
+        int Count(int width) => Limits.KeyBytes(KeyTable(specs, width, out var index), index);
+
+        // The widest last column the tool says fits
+        var widest = Enumerable.Range(1, 8000).Last(w => Count(w) <= Limits.MaxKeyBytes);
+        Assert.Null(await TryAsync(KeySql(specs, widest)));
+        Refused(await TryAsync(KeySql(specs, widest + 5)));
+    }
+
+    private static TableInfo KeyTable(string[] specs, int width, out IndexInfo index)
+    {
+        var columns = specs.Select((spec, i) =>
+        {
+            var parts = spec.Split(' ', 2);
+            var (type, length) = KeyType(parts[0], i == specs.Length - 1 ? width : null);
+            return new ColumnInfo($"c{i}", type.Split('(')[0], type.Split('(')[0], "sys", false, false, length,
+                type.StartsWith("decimal") ? 18 : 0, type.StartsWith("decimal") ? 2 : type.StartsWith("datetime2") ? 7 : 0,
+                IsNullable: parts[1] == "NULL");
+        }).ToList();
+        index = new IndexInfo("ix", "NONCLUSTERED", false, false, false, false, null, false, columns.Select(c => new IndexColumn(c.Name, false)).ToList(), []);
+        return new TableInfo(new ObjectName("dbo", "t"), 0, 0, columns, [index], [], []);
+    }
+
+    private static string KeySql(string[] specs, int width) =>
+        string.Join(", ", specs.Select((spec, i) =>
+        {
+            var parts = spec.Split(' ', 2);
+            var type = parts[0] switch
+            {
+                "varchar" or "char" or "binary" or "varbinary" or "nvarchar" => $"{parts[0]}({width})",
+                "decimal" => "decimal(18,2)",
+                _ => parts[0],
+            };
+            return $"c{i} {type} {parts[1]}";
+        }))
+        + $", INDEX ix ({string.Join(", ", specs.Select((_, i) => $"c{i}"))})";
+
+    private static (string Type, int Length) KeyType(string type, int? width)
+    {
+        var open = type.IndexOf('(');
+        if (open > 0)
+        {
+            var length = int.Parse(type[(open + 1)..^1], System.Globalization.CultureInfo.InvariantCulture);
+            return (type, type.StartsWith('n') ? 2 * length : length);
+        }
+
+        return type switch
+        {
+            "varchar" or "char" or "binary" or "varbinary" => (type, width ?? 1),
+            "nvarchar" => (type, 2 * (width ?? 1)),
+            "int" => (type, 4),
+            "bigint" => (type, 8),
+            "tinyint" or "bit" => (type, 1),
+            "uniqueidentifier" => (type, 16),
+            "datetime2" => (type, 8),
+            "decimal" => (type, 9),
+            _ => throw new ArgumentException(type),
+        };
+    }
+
+    [Theory]
+    // 8040 bytes of columns: 4 for the id, and the rest
+    [InlineData("a varchar(8000) NULL, b varchar({0}) NULL", 36)]
+    [InlineData("a varchar(4000) NULL, b varchar({0}) NULL", 4036)]
+    [InlineData("a binary(100) NULL, b varchar({0}) NULL", 7936)]
+    public async Task A_columnstore_row_fits_8040_bytes_of_columns(string shape, int widest)
+    {
+        string Table(int width) =>
+            $"CREATE TABLE dbo.t_{Guid.NewGuid():N} (id int NOT NULL PRIMARY KEY NONCLUSTERED, {string.Format(shape, width)}, INDEX cci CLUSTERED COLUMNSTORE) WITH (MEMORY_OPTIMIZED = ON);";
+
+        Assert.Null(await server.TryAsync(SqlServer.Probe, Table(widest)));
+        Assert.NotNull(await server.TryAsync(SqlServer.Probe, Table(widest + 1)));
+
+        var first = int.Parse(shape[(shape.IndexOf('(') + 1)..shape.IndexOf(')')], System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal(Limits.MaxColumnstoreRowBytes, 4 + first + widest);
     }
 
     [Fact]

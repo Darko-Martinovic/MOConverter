@@ -203,6 +203,7 @@ Every rule the assessment applies, worst outcome first. `moconverter rules` prin
 | `unique-filtered-index` | blocked | A unique filtered index: without its filter, rows it allowed could clash. |
 | `foreign-key-boundary` | blocked | A foreign key links the table to one that won't be in the new database: not selected, blocked, or memory-optimized already. |
 | `foreign-key-target` | blocked | A foreign key references a unique key: between memory-optimized tables, it must reference the primary key. |
+| `max-key` | blocked | A primary key column becomes max, as a UTF-8 varchar over 4000 does, and no index can have one in its key. |
 | `untrusted` | blocked | A foreign key or check made WITH NOCHECK may have rows that break it, and the memory-optimized copy checks every row. |
 | `definition-hidden` | blocked | A definition isn't visible to this login: it needs VIEW DEFINITION. |
 | `type-lossy` | lossy | A column's type is stored as another type, and loses its methods or part of its value. |

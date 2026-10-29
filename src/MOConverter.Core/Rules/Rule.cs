@@ -54,6 +54,7 @@ public static class RuleCatalogue
     public static readonly Rule UniqueFilteredIndex = new("unique-filtered-index", Outcome.Blocked, "A unique filtered index: without its filter, rows it allowed could clash.");
     public static readonly Rule ForeignKeyBoundary = new("foreign-key-boundary", Outcome.Blocked, "A foreign key links the table to one that won't be in the new database: not selected, blocked, or memory-optimized already.");
     public static readonly Rule ForeignKeyTarget = new("foreign-key-target", Outcome.Blocked, "A foreign key references a unique key: between memory-optimized tables, it must reference the primary key.");
+    public static readonly Rule MaxKey = new("max-key", Outcome.Blocked, "A primary key column becomes max, as a UTF-8 varchar over 4000 does, and no index can have one in its key.");
     public static readonly Rule Untrusted = new("untrusted", Outcome.Blocked, "A foreign key or check made WITH NOCHECK may have rows that break it, and the memory-optimized copy checks every row.");
     public static readonly Rule DefinitionHidden = new("definition-hidden", Outcome.Blocked, "A definition isn't visible to this login: it needs VIEW DEFINITION.");
 

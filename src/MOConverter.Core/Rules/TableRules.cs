@@ -149,7 +149,12 @@ public static class TableRules
             if (key > Limits.MaxKeyBytes)
             {
                 var wide = $"{(index.IsPrimaryKey ? "primary key" : "index")} {name}'s key takes {(key == int.MaxValue ? "a max column" : $"{key} bytes")}, more than a range index's {Limits.MaxKeyBytes}";
-                if (index.IsPrimaryKey)
+                if (index.IsPrimaryKey && key == int.MaxValue)
+                {
+                    // No index of a memory-optimized table can have a max column in its key, a hash one neither
+                    yield return new(RuleCatalogue.MaxKey, $"primary key {name} has a column that becomes max, which no index can have in its key");
+                }
+                else if (index.IsPrimaryKey)
                 {
                     yield return new(RuleCatalogue.WideKey, $"{wide}: it becomes a hash index");
                 }
