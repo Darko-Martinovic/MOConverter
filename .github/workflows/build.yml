@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sql-server: ["2022", "2025"]
+        sql-server: ["2019", "2022", "2025"]
     env:
       # The tests start this SQL Server in a container with Testcontainers
       MSSQL_IMAGE: mcr.microsoft.com/mssql/server:${{ matrix.sql-server }}-latest

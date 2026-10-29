@@ -195,11 +195,19 @@ public sealed class ConvertTests(SqlServer server)
             ALTER TABLE dbo.Child WITH NOCHECK ADD CONSTRAINT FK_Child_Parent FOREIGN KEY (ParentId) REFERENCES dbo.Parent (Id);
             """);
 
-        var result = Run("convert", "--source", server.ConnectionString("Orphans"), "--target-db", "Orphans Converted");
+        // The assessment sees the untrusted key, so convert refuses before it starts
+        var refused = Run("convert", "--source", server.ConnectionString("Orphans"), "--target-db", "Orphans Converted");
+        Assert.Equal(App.Blocked, refused.ExitCode);
+        Assert.Contains("WITH NOCHECK", refused.Output);
+        Assert.Equal(DBNull.Value, await server.ScalarAsync("master", "SELECT DB_ID(N'Orphans Converted');"));
 
-        Assert.Equal(1, result.ExitCode);
-        Assert.Contains("Adding the foreign keys failed", result.Output);
-        Assert.Contains("Drop it before trying again", result.Output);
+        // Past the assessment, the step that fails is named, and the new database is left as it is
+        var model = await Assessor.ReadAsync(server.ConnectionString("Orphans"), TestContext.Current.CancellationToken);
+        var failure = await Assert.ThrowsAsync<ConversionException>(() => Converter.ConvertAsync(model,
+            [new ObjectName("dbo", "Parent"), new ObjectName("dbo", "Child")],
+            new Scripting.ScriptOptions("Orphans Converted", new HashSet<ObjectName>(), new HashSet<ObjectName>()),
+            server.ConnectionString("Orphans"), server.ConnectionString("master"), 100, cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal("Adding the foreign keys", failure.Step);
         Assert.Equal(1L, await server.ScalarAsync("Orphans Converted", "SELECT COUNT_BIG(*) FROM dbo.Child;"));
     }
 

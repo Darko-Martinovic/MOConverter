@@ -32,7 +32,7 @@ public sealed record Finding(Rule Rule, string Message)
 public static class RuleCatalogue
 {
     // The server and the selection
-    public static readonly Rule ServerVersion = new("server-version", Outcome.Blocked, "SQL Server 2017 or later is needed.");
+    public static readonly Rule ServerVersion = new("server-version", Outcome.Blocked, "SQL Server 2019 or later is needed.");
     public static readonly Rule ServerXtp = new("server-xtp", Outcome.Blocked, "The server or service tier doesn't support In-Memory OLTP.");
     public static readonly Rule SelectionUnmatched = new("selection-unmatched", Outcome.Blocked, "A table or schema named in the selection doesn't exist.");
     public static readonly Rule MemoryTotal = new("memory-total", Outcome.Blocked, "The selected tables need more memory than the server has.");
@@ -52,8 +52,10 @@ public static class RuleCatalogue
     public static readonly Rule TypeUnsupported = new("type-unsupported", Outcome.Blocked, "A column's type has no memory-optimized equivalent: sql_variant, or a CLR type of your own.");
     public static readonly Rule ComputedUnsupported = new("computed-unsupported", Outcome.Blocked, "A computed column uses something memory-optimized tables don't accept.");
     public static readonly Rule UniqueFilteredIndex = new("unique-filtered-index", Outcome.Blocked, "A unique filtered index: without its filter, rows it allowed could clash.");
-    public static readonly Rule ForeignKeyBoundary = new("foreign-key-boundary", Outcome.Blocked, "A foreign key links the table to one that won't be memory-optimized.");
+    public static readonly Rule ForeignKeyBoundary = new("foreign-key-boundary", Outcome.Blocked, "A foreign key links the table to one that won't be in the new database: not selected, blocked, or memory-optimized already.");
     public static readonly Rule ForeignKeyTarget = new("foreign-key-target", Outcome.Blocked, "A foreign key references a unique key: between memory-optimized tables, it must reference the primary key.");
+    public static readonly Rule MaxKey = new("max-key", Outcome.Blocked, "A primary key column becomes max, as a UTF-8 varchar over 4000 does, and no index can have one in its key.");
+    public static readonly Rule Untrusted = new("untrusted", Outcome.Blocked, "A foreign key or check made WITH NOCHECK may have rows that break it, and the memory-optimized copy checks every row.");
     public static readonly Rule DefinitionHidden = new("definition-hidden", Outcome.Blocked, "A definition isn't visible to this login: it needs VIEW DEFINITION.");
 
     // Lossy changes

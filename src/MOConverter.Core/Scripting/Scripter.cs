@@ -244,7 +244,7 @@ public static class Scripter
 
         // A rowversion was filled in by SQL Server; as binary(8), nothing fills it in, unless it is
         // part of the primary key, which can't be NULL
-        var nullable = column.IsNullable || (column.Type == "timestamp" && !inPrimaryKey);
+        var nullable = Limits.IsNullable(table, column);
         definition.Append(nullable ? " NULL" : " NOT NULL");
 
         if (column.DefaultDefinition is not null)

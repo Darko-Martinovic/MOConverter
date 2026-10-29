@@ -6,11 +6,12 @@ The Red Gate Simple Talk article [Converting a Database to In-Memory OLTP](https
 
 ## Version 2
 
-Version 2 is a command-line tool for SQL Server 2017 and later. It looks before it converts:
+Version 2 is a command-line tool for SQL Server 2019 and later. It looks before it converts:
 
 - `assess` reports, table by table, what converting would do. It only reads.
 - `script` writes the T-SQL that creates memory-optimized copies of the tables you choose in another database, for you to review and run. It only reads.
 - `convert` makes a new database with those tables and copies the data into them. The source is only read.
+- `rules` lists the rules the assessment applies.
 
 Version 1 converted every table and logged what it dropped on the way. Version 2 refuses a change in meaning unless you accept it with `--accept-lossy`. It also fixes version 1's mistakes:
 
@@ -25,7 +26,7 @@ Version 1 converted every table and logged what it dropped on the way. Version 2
 ## Requirements
 
 - .NET 10 SDK, to build and run it.
-- SQL Server 2017 or later, on Windows or Linux, or Azure SQL Managed Instance. The tests run on SQL Server 2022 and 2025. Azure SQL Database supports In-Memory OLTP on the Premium and Business Critical tiers only, and the tool hasn't been tested there.
+- SQL Server 2019 or later, on Windows or Linux, or Azure SQL Managed Instance. The tests run on SQL Server 2019, 2022 and 2025. Azure SQL Database supports In-Memory OLTP on the Premium and Business Critical tiers only, and the tool hasn't been tested there.
 - To read the source, a login that can see the database's definitions (VIEW DEFINITION). With VIEW SERVER STATE too, the tool compares the size of the tables with the server's memory; without it, that check is skipped.
 - For `convert`, or to run the script: permission to create a database on the target server.
 
@@ -43,9 +44,10 @@ dotnet tool install --global MOConverter --add-source artifacts
 moconverter assess --source "..."
 moconverter script --source "..." --tables sales.Orders,sales.OrderLines --target-db SalesInMemory --out convert.sql
 moconverter convert --source "..." --tables sales.Orders,sales.OrderLines --target-db SalesInMemory
+moconverter rules
 ```
 
-Options of every command:
+Options of `assess`, `script` and `convert`:
 
 | Option | Meaning |
 |---|---|
@@ -127,7 +129,7 @@ Run the script with `sqlcmd -b -x -i convert.sql`. The script sets `QUOTED_IDENT
 3. It compares the row counts.
 4. It adds the foreign keys last, so the order of the tables doesn't matter, and the keys check the copied data.
 
-The rows go through the machine that runs the tool, so for a big database, run it near the servers. If a step fails, `convert` says which one, and leaves the new database as it is for a look. For example, a foreign key made `WITH NOCHECK` may have let rows in that the new key refuses. Drop the database before trying again.
+The rows go through the machine that runs the tool, so for a big database, run it near the servers. If a step fails, `convert` says which one, and leaves the new database as it is for a look. Drop the database before trying again.
 
 For five of the test tables:
 
@@ -150,7 +152,7 @@ Each table gets the worst outcome among its findings:
 | ready | Converts as it is. |
 | fixed | The tool changes something, and the data and query results stay the same. For example, an alias type becomes its base type, `text` becomes `varchar(max)`, a UTF-8 `varchar` becomes `nvarchar`, or a clustered index becomes nonclustered. A filter or INCLUDE is dropped from an index. An index or columnstore index memory-optimized tables can't hold is left out. A primary key too wide for a range index becomes a hash index. |
 | lossy | Converts with a change in meaning, which `--accept-lossy` has to allow. For example, `datetimeoffset` loses its offset, `xml` and the spatial types lose their methods, or a CASCADE foreign key becomes NO ACTION. A check or default SQL Server refuses, a trigger, or a unique key too wide to keep is left out. A computed column reads a column whose type changes. |
-| blocked | Can't be converted until something changes. For example, the table has no primary key (or a disabled one), uses `sql_variant`, or has a unique filtered index. It is a temporal, ledger or graph table. A foreign key references a unique key rather than the primary key, or links the table to one that won't be in the new database. A definition is hidden from the login, or there is more data than memory. |
+| blocked | Can't be converted until something changes. For example, the table has no primary key (or a disabled one), uses `sql_variant`, or has a unique filtered index. It is a temporal, ledger or graph table. A foreign key references a unique key rather than the primary key, or links the table to one that won't be in the new database. A key or check was made `WITH NOCHECK`, so rows may break it. A definition is hidden from the login, or there is more data than memory. |
 
 For example (a few of the test tables, cut to fit):
 
@@ -176,6 +178,64 @@ The limits behind these rules were checked on SQL Server 2022 and 2025. The test
 - the 2500-byte key limit, at its boundary;
 - the columnstore limits;
 - each feature it works around.
+
+## Rules
+
+Every rule the assessment applies, worst outcome first. `moconverter rules` prints the same list. The rules marked ready are notes about the server or the selection, not about a table.
+
+<!-- rules: written by moconverter rules --format markdown, and a test checks it is current -->
+| Rule | Outcome | What it means |
+|---|---|---|
+| `server-version` | blocked | SQL Server 2019 or later is needed. |
+| `server-xtp` | blocked | The server or service tier doesn't support In-Memory OLTP. |
+| `selection-unmatched` | blocked | A table or schema named in the selection doesn't exist. |
+| `memory-total` | blocked | The selected tables need more memory than the server has. |
+| `no-primary-key` | blocked | A memory-optimized table needs a primary key. |
+| `memory` | blocked | The table alone needs more memory than the server has. |
+| `temporal` | blocked | System-versioned (temporal) tables and their history tables are converted by hand. |
+| `ledger` | blocked | Ledger tables can't be memory-optimized. |
+| `graph` | blocked | Graph (node and edge) tables can't be memory-optimized. |
+| `filetable` | blocked | FileTables can't be memory-optimized. |
+| `replicated` | blocked | Tables published for replication are converted by hand. |
+| `column-set` | blocked | Column sets (and the sparse columns behind them) aren't supported. |
+| `type-unsupported` | blocked | A column's type has no memory-optimized equivalent: sql_variant, or a CLR type of your own. |
+| `computed-unsupported` | blocked | A computed column uses something memory-optimized tables don't accept. |
+| `unique-filtered-index` | blocked | A unique filtered index: without its filter, rows it allowed could clash. |
+| `foreign-key-boundary` | blocked | A foreign key links the table to one that won't be in the new database: not selected, blocked, or memory-optimized already. |
+| `foreign-key-target` | blocked | A foreign key references a unique key: between memory-optimized tables, it must reference the primary key. |
+| `max-key` | blocked | A primary key column becomes max, as a UTF-8 varchar over 4000 does, and no index can have one in its key. |
+| `untrusted` | blocked | A foreign key or check made WITH NOCHECK may have rows that break it, and the memory-optimized copy checks every row. |
+| `definition-hidden` | blocked | A definition isn't visible to this login: it needs VIEW DEFINITION. |
+| `type-lossy` | lossy | A column's type is stored as another type, and loses its methods or part of its value. |
+| `check-unsupported` | lossy | A check constraint uses something memory-optimized tables don't accept, and is left out. |
+| `default-unsupported` | lossy | A default uses something memory-optimized tables don't accept, and is left out. |
+| `identity-seed` | lossy | IDENTITY must be (1,1): existing values are kept, and new ones count up by 1. |
+| `foreign-key-action` | lossy | CASCADE, SET NULL and SET DEFAULT aren't supported: the key becomes NO ACTION. |
+| `trigger` | lossy | Triggers aren't carried over: rewrite them as natively compiled AFTER triggers. |
+| `change-tracking` | lossy | Change tracking isn't supported on memory-optimized tables. |
+| `change-data-capture` | lossy | Change data capture isn't supported on memory-optimized tables. |
+| `full-text` | lossy | Full-text indexes aren't supported on memory-optimized tables. |
+| `computed-over-lossy` | lossy | A computed column uses a column whose type changes, so its values can change. |
+| `wide-unique-key` | lossy | A unique index wider than a range index's 2500 bytes is left out, and with it the uniqueness it enforced. |
+| `alias-type` | fixed | Alias types aren't supported: the column gets the alias's base type. |
+| `old-lob-type` | fixed | text, ntext and image become varchar(max), nvarchar(max) and varbinary(max). |
+| `sparse` | fixed | SPARSE isn't supported: the column is stored in full. |
+| `utf8-collation` | fixed | char and varchar can't have a UTF-8 collation: they become nchar and nvarchar, with the same collation. |
+| `wide-key` | fixed | A range index's key can't pass 2500 bytes: a primary key becomes a hash index, another index is left out. |
+| `columnstore-limits` | fixed | A clustered columnstore index is left out when a column is max, a column is computed, or a row can pass 8060 bytes. |
+| `computed-index-persisted` | fixed | An index on a computed column needs it PERSISTED. |
+| `clustered-index` | fixed | Memory-optimized tables have no clustered rowstore index: it becomes nonclustered. |
+| `included-columns` | fixed | Every index on a memory-optimized table covers all columns: INCLUDE is dropped. |
+| `filtered-index` | fixed | Filtered indexes aren't supported: the index covers every row. |
+| `nonclustered-columnstore` | fixed | Only a clustered columnstore index is supported: the nonclustered one is left out. |
+| `xml-spatial-index` | fixed | XML and spatial indexes are left out, with the types they index. |
+| `disabled` | fixed | Disabled indexes and constraints aren't carried over. |
+| `partitioned` | fixed | Memory-optimized tables aren't partitioned: the table becomes one partition. |
+| `compression` | fixed | Row and page compression aren't supported: the data is stored uncompressed. |
+| `memory-note` | ready | How the memory check was done, or why it wasn't. |
+| `edition-quota` | ready | Express, Web and Standard editions cap memory-optimized data per database. |
+| `azure-sql-database` | ready | Azure SQL Database: only Premium and Business Critical tiers support In-Memory OLTP. |
+<!-- /rules -->
 
 ## Building and testing
 

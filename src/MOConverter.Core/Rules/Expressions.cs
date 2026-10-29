@@ -36,7 +36,9 @@ public static class Expressions
     /// <summary>Says what was found, telling apart what is known to fail from what isn't known to work.</summary>
     public static string Describe(IReadOnlyList<string> unsupported)
     {
-        var known = unsupported.Where(u => KnownUnsupported.Contains(u) || u.StartsWith("CAST to ", StringComparison.Ordinal) || u.StartsWith("CONVERT to ", StringComparison.Ordinal)).ToList();
+        var known = unsupported.Where(u => KnownUnsupported.Contains(u)
+            || u.StartsWith("CAST to ", StringComparison.Ordinal) || u.StartsWith("CONVERT to ", StringComparison.Ordinal)
+            || u.EndsWith(" (a property)", StringComparison.Ordinal)).ToList();
         var unknown = unsupported.Except(known).ToList();
         var parts = new List<string>();
         if (known.Count > 0)
@@ -93,6 +95,14 @@ public static class Expressions
                 Found.Add($"{name} (a user-defined function or a method)");
             else if (!SupportedFunctions.Contains(name))
                 Found.Add(name);
+        }
+
+        // Place.Lat reads a property of a CLR column, which becomes varbinary; a check or computed
+        // column names its own table's columns with one part
+        public override void Visit(ColumnReferenceExpression node)
+        {
+            if (node.MultiPartIdentifier is { Count: >= 2 } name)
+                Found.Add($"{string.Join(".", name.Identifiers.Select(i => i.Value))} (a property)");
         }
 
         public override void Visit(LeftFunctionCall node) => Found.Add("LEFT");

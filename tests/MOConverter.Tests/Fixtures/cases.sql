@@ -38,6 +38,8 @@ CREATE TABLE cases.Columnstore (Id int NOT NULL PRIMARY KEY NONCLUSTERED, A int 
 
 -- Ready: names that need brackets
 CREATE TABLE cases.[Order Details] ([Order Id] int NOT NULL PRIMARY KEY, [Select] int NULL, [Unit]]Price] money NULL);
+-- Ready: names SqlBulkCopy would take for quoted ones, with a computed column between them
+CREATE TABLE cases.Brackets ([Id] int PRIMARY KEY, [[a]]] int NULL, [Twice] AS [Id] * 2, [[] int NULL, [[ab] int NULL);
 
 -- Fixed: alias types get their base types, which version 1 got wrong (bigint became int,
 -- varchar char, datetime2 datetime)
@@ -113,6 +115,7 @@ ALTER TABLE cases.Tracked ENABLE CHANGE_TRACKING;
 -- Fixed: a range index's key can't pass 2500 bytes
 CREATE TABLE cases.WideIndex (Id int PRIMARY KEY, Code varchar(3000) NULL, INDEX IX_WideIndex_Code (Code));
 CREATE TABLE cases.WidePrimaryKey (Code varchar(2600) NOT NULL PRIMARY KEY);
+CREATE TABLE cases.TwoVarIndex (Id int PRIMARY KEY, A varchar(1248) NOT NULL, B varchar(1248) NOT NULL, INDEX IX_TwoVarIndex (A, B));
 -- Fixed: char and varchar can't have a UTF-8 collation
 CREATE TABLE cases.Utf8 (Id int PRIMARY KEY, Name varchar(20) COLLATE Latin1_General_100_CI_AS_SC_UTF8 NULL, INDEX IX_Utf8_Name (Name));
 -- Fixed: a clustered columnstore index can't hold nvarchar(max)
@@ -130,6 +133,9 @@ CREATE TABLE cases.NoPrimaryKey (Id int NOT NULL, Name nvarchar(10) NULL);
 CREATE TABLE cases.Variant (Id int PRIMARY KEY, Value sql_variant NULL);
 CREATE TABLE cases.ComputedUpper (Id int PRIMARY KEY, Name varchar(10) NULL, Shout AS UPPER(Name));
 CREATE TABLE cases.ComputedVariant (Id int PRIMARY KEY, Anything AS CONVERT(sql_variant, Id));
+CREATE TABLE cases.GeoProperty (Id int PRIMARY KEY, Place geography NULL, Lat AS Place.Lat);
+-- Blocked: a UTF-8 varchar over 4000 becomes nvarchar(max), which no key can have
+CREATE TABLE cases.Utf8Key (Code varchar(5000) COLLATE Latin1_General_100_CI_AS_SC_UTF8 NOT NULL PRIMARY KEY NONCLUSTERED);
 -- Blocked: a key to a unique constraint rather than the primary key, and the table it references
 CREATE TABLE cases.UniqueParent (Id int PRIMARY KEY, Code int NOT NULL CONSTRAINT UQ_UniqueParent_Code UNIQUE);
 CREATE TABLE cases.UniqueChild (Id int PRIMARY KEY, Code int NULL CONSTRAINT FK_UniqueChild_Code REFERENCES cases.UniqueParent (Code));
@@ -149,6 +155,13 @@ CREATE TABLE cases.Temporal (
 CREATE TABLE cases.Linked (Id int PRIMARY KEY, VariantId int NULL CONSTRAINT FK_Linked_Variant REFERENCES cases.Variant (Id));
 -- Blocked in turn: linked to Linked
 CREATE TABLE cases.LinkedToLinked (Id int PRIMARY KEY, LinkedId int NULL CONSTRAINT FK_LinkedToLinked_Linked REFERENCES cases.Linked (Id));
+-- Blocked: constraints made WITH NOCHECK, which the memory-optimized copy would check; and the
+-- table the untrusted key references, in turn
+CREATE TABLE cases.LooseParent (Id int PRIMARY KEY);
+CREATE TABLE cases.LooseChild (Id int PRIMARY KEY, ParentId int NULL);
+ALTER TABLE cases.LooseChild WITH NOCHECK ADD CONSTRAINT FK_LooseChild_Parent FOREIGN KEY (ParentId) REFERENCES cases.LooseParent (Id);
+CREATE TABLE cases.LooseCheck (Id int PRIMARY KEY, A int NULL);
+ALTER TABLE cases.LooseCheck WITH NOCHECK ADD CONSTRAINT CK_LooseCheck_A CHECK (A > 0);
 
 -- Rows for convert to copy, with the values its mappings must keep
 INSERT cases.Ready (Name, Owner) VALUES (N'No owner', NULL);
@@ -183,3 +196,5 @@ INSERT cases.WideUnique (Id, Note) VALUES (1, 'n');
 INSERT cases.ComputedOverLossy (Id, Moment) VALUES (1, '2026-10-29T12:00:00+02:00');
 INSERT cases.CastCheck (Id, Moment) VALUES (1, '2026-10-29T12:00:00+02:00');
 INSERT cases.VersionKey (Name) VALUES (N'x');
+INSERT cases.Brackets ([Id], [[a]]], [[], [[ab]) VALUES (1, 10, 20, 30);
+INSERT cases.TwoVarIndex (Id, A, B) VALUES (1, 'a', 'b');

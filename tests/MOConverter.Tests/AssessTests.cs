@@ -26,6 +26,10 @@ public sealed class AssessTests(SqlServer server)
     [InlineData("Partitioned", Outcome.Fixed, "partitioned")]
     [InlineData("Compressed", Outcome.Fixed, "compression")]
     [InlineData("Disabled", Outcome.Fixed, "disabled", "disabled")]
+    [InlineData("Brackets", Outcome.Ready)]
+    [InlineData("TwoVarIndex", Outcome.Fixed, "wide-key")]
+    [InlineData("GeoProperty", Outcome.Blocked, "type-lossy", "computed-unsupported")]
+    [InlineData("Utf8Key", Outcome.Blocked, "utf8-collation", "max-key")]
     [InlineData("WideIndex", Outcome.Fixed, "wide-key")]
     [InlineData("WidePrimaryKey", Outcome.Fixed, "wide-key")]
     [InlineData("Utf8", Outcome.Fixed, "utf8-collation")]
@@ -56,6 +60,9 @@ public sealed class AssessTests(SqlServer server)
     [InlineData("TemporalHistory", Outcome.Blocked, "temporal", "no-primary-key", "clustered-index", "compression")]
     [InlineData("Linked", Outcome.Blocked, "foreign-key-boundary")]
     [InlineData("LinkedToLinked", Outcome.Blocked, "foreign-key-boundary")]
+    [InlineData("LooseChild", Outcome.Blocked, "untrusted")]
+    [InlineData("LooseParent", Outcome.Blocked, "foreign-key-boundary")]
+    [InlineData("LooseCheck", Outcome.Blocked, "untrusted")]
     public async Task Each_case_has_its_outcome_and_findings(string table, Outcome outcome, params string[] rules)
     {
         var assessed = Table(await AssessAsync(), table);

@@ -27,7 +27,7 @@ public sealed record Assessment(
 /// <summary>Says which tables can become memory-optimized, and why the others can't. It changes nothing.</summary>
 public static class Assessor
 {
-    public const int MinimumMajorVersion = 14;
+    public const int MinimumMajorVersion = 15;
 
     public static async Task<Assessment> AssessAsync(string connectionString, Selection selection, CancellationToken cancellationToken = default) =>
         Assess(await ReadAsync(connectionString, cancellationToken), selection);

@@ -98,9 +98,9 @@ public sealed class AssessorTests
     [Fact]
     public void An_old_server_is_blocked()
     {
-        var assessment = Assess([Table("A")], server: Server with { ProductVersion = "13.0.7000.253", MajorVersion = 13 });
+        var assessment = Assess([Table("A")], server: Server with { ProductVersion = "14.0.3456.2", MajorVersion = 14 });
 
-        Assert.Contains(assessment.Notes, n => n.Rule == RuleCatalogue.ServerVersion && n.Message == "this is SQL Server 13.0.7000.253");
+        Assert.Contains(assessment.Notes, n => n.Rule == RuleCatalogue.ServerVersion && n.Message == "this is SQL Server 14.0.3456.2");
         Assert.Equal(Outcome.Blocked, assessment.Outcome);
     }
 
